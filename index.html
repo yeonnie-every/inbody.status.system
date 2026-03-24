@@ -1882,63 +1882,69 @@ async function saveToSheets(){
   btn.textContent='저장 중...';btn.disabled=true;
   try{
     const data=buildSaveData();
-    // 로컬스토리지에도 백업
     try{localStorage.setItem(STORAGE_KEY,JSON.stringify(data));}catch(e){}
-    const res=await fetch(GAS_URL,{
+    await fetch(GAS_URL,{
       method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'text/plain'},
       body:JSON.stringify(data)
     });
-    const result=await res.json();
-    if(result.success){
-      updateLog.unshift({text:'☁️ Google Sheets에 저장됨',time:new Date().toISOString()});
-      renderFeed();
-      showToast('☁️ Google Sheets에 저장됐습니다!');
-    } else {
-      throw new Error('저장 실패');
-    }
+    updateLog.unshift({text:'☁️ Google Sheets에 저장됨',time:new Date().toISOString()});
+    renderFeed();
+    showToast('☁️ Google Sheets에 저장됐습니다!');
   }catch(e){
     showToast('❌ 저장 실패 — 네트워크를 확인해주세요');
   }
   btn.textContent='☁️ 저장';btn.disabled=false;
 }
 
-// 🔄 Google Sheets에서 불러오기
-async function loadFromSheets(){
+// 🔄 Google Sheets에서 불러오기 (JSONP 방식)
+function loadFromSheets(){
   const btn=document.getElementById('btn-load-data');
   btn.textContent='불러오는 중...';btn.disabled=true;
-  try{
-    const res=await fetch(GAS_URL+'?t='+Date.now());
-    const data=await res.json();
-    if(data.success&&data.entries){
-      // entries만 오므로 나머지는 로컬스토리지에서 보완
-      const local=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');
-      const merged={
-        entries:data.entries,
-        products:local.products||{},
-        deadlines:local.deadlines||[],
-        updateLog:local.updateLog||[],
-        hugagongSubs:local.hugagongSubs||[...HUGAGONG_SUBS_DEFAULT],
-        customTypes:local.customTypes||[]
-      };
-      // products 재구성
-      PARTS.forEach(p=>merged.products[p]=merged.products[p]||[]);
-      Object.keys(data.entries).forEach(k=>{
-        const[part,product]=k.split('|');
-        if(!merged.products[part])merged.products[part]=[];
-        if(!merged.products[part].includes(product))merged.products[part].push(product);
-      });
-      applyLoadData(merged);
-      try{localStorage.setItem(STORAGE_KEY,JSON.stringify(merged));}catch(e){}
-      updateLog.unshift({text:'🔄 Google Sheets에서 불러옴',time:new Date().toISOString()});
-      renderDashboard();renderFeed();renderPartTabs();renderWtypeTabs();renderMatrix();renderPriority();
-      showToast('✅ Google Sheets 데이터를 불러왔습니다!');
-    } else {
-      showToast('📭 저장된 데이터가 없습니다');
+  const callbackName='ibsCallback_'+Date.now();
+  const script=document.createElement('script');
+  window[callbackName]=function(data){
+    try{
+      if(data.success&&data.entries){
+        const local=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');
+        const merged={
+          entries:data.entries,
+          products:local.products||{},
+          deadlines:local.deadlines||[],
+          updateLog:local.updateLog||[],
+          hugagongSubs:local.hugagongSubs||[...HUGAGONG_SUBS_DEFAULT],
+          customTypes:local.customTypes||[]
+        };
+        PARTS.forEach(p=>merged.products[p]=merged.products[p]||[]);
+        Object.keys(data.entries).forEach(k=>{
+          const[part,product]=k.split('|');
+          if(!merged.products[part])merged.products[part]=[];
+          if(!merged.products[part].includes(product))merged.products[part].push(product);
+        });
+        applyLoadData(merged);
+        try{localStorage.setItem(STORAGE_KEY,JSON.stringify(merged));}catch(e){}
+        updateLog.unshift({text:'🔄 Google Sheets에서 불러옴',time:new Date().toISOString()});
+        renderDashboard();renderFeed();renderPartTabs();renderWtypeTabs();renderMatrix();renderPriority();
+        showToast('✅ Google Sheets 데이터를 불러왔습니다!');
+      } else {
+        showToast('📭 저장된 데이터가 없습니다');
+      }
+    }catch(e){
+      showToast('❌ 불러오기 실패');
     }
-  }catch(e){
+    delete window[callbackName];
+    document.head.removeChild(script);
+    btn.textContent='🔄 불러오기';btn.disabled=false;
+  };
+  script.src=GAS_URL+'?callback='+callbackName+'&t='+Date.now();
+  script.onerror=function(){
     showToast('❌ 불러오기 실패 — 네트워크를 확인해주세요');
-  }
-  btn.textContent='🔄 불러오기';btn.disabled=false;
+    delete window[callbackName];
+    document.head.removeChild(script);
+    btn.textContent='🔄 불러오기';btn.disabled=false;
+  };
+  document.head.appendChild(script);
 }
 
 // 🔄 자동저장 (로컬스토리지 + Google Sheets)
