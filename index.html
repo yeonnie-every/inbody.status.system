@@ -1567,48 +1567,63 @@ function parseIBSWorkbook(wb){
   wb.SheetNames.forEach(sheetName=>{
     const ws=wb.Sheets[sheetName];
     const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    if(rows.length<2)return;
+
+    // 템플릿 형식 감지: 1행이 파트/제품명/국가/작업유형/상태 컬럼인지 확인
+    const firstRow=rows[0].map(c=>String(c).trim());
+    const isTemplate=firstRow.includes('파트')&&firstRow.includes('제품명')&&firstRow.includes('작업유형');
+
+    if(isTemplate){
+      // 템플릿 형식 파싱 (파트/제품명/국가/작업유형/상태/최신버전/담당자/비고)
+      const colIdx={};
+      firstRow.forEach((h,i)=>colIdx[h]=i);
+      for(let r=1;r<rows.length;r++){
+        const row=rows[r];
+        if(!row.some(c=>c!==''))continue;
+        const part=String(row[colIdx['파트']]||'').trim();
+        const product=String(row[colIdx['제품명']]||'').trim();
+        const country=String(row[colIdx['국가']]||'').trim();
+        const wtype=String(row[colIdx['작업유형']]||'').trim();
+        const statusRaw=String(row[colIdx['상태']]||'').trim();
+        const version=String(row[colIdx['최신버전']]||'').trim();
+        const owner=String(row[colIdx['담당자']]||'').trim();
+        const noteVal=row[colIdx['비고']];
+        const note=noteVal&&String(noteVal)!=='NaT'&&String(noteVal)!=='nan'?String(noteVal).trim():'';
+        if(!part||!product||!wtype)continue;
+        const status=normalizeStatus(statusRaw);
+        results.push({part,product,country,type:wtype,status,version,owner,note});
+      }
+      return;
+    }
+
+    // 기존 매트릭스 형식 파싱
     if(rows.length<4)return;
-
     const isHugaGong=sheetName.includes('후가공');
-    // 후가공: col0=국가, col1=구분, col2~=제품
-    // 제품UI/인증: col0=국가, col1~=제품
     const dataColStart=isHugaGong?2:1;
-    const partRow=rows[1];   // 2행: 파트명 (병합셀로 첫 열에만 값)
-    const prodRow=rows[2];   // 3행: 제품명
-
-    // 파트명 — 병합셀이라 앞 값 이어받기
+    const partRow=rows[1];
+    const prodRow=rows[2];
     const partNames=[];let lastPart='';
     for(let i=0;i<prodRow.length;i++){
       const v=String(partRow[i]||'').trim();
       if(v)lastPart=v;
       partNames.push(lastPart);
     }
-
-    // 제품명 목록 (dataColStart부터)
     const prodNames=prodRow.slice(dataColStart).map(p=>String(p).trim());
-
-    // 후가공: 국가(A열)도 병합셀 → 앞값 이어받기
     let lastCountry='';
     const skipCountries=new Set(['국가','']);
-    // 데이터 행 스캔 (3행 = index 3부터, 그러나 후가공은 93행 이후 메타행 제외)
     for(let r=3;r<rows.length;r++){
       const row=rows[r];
       let country=String(row[0]||'').trim();
-      // 후가공: 국가 병합셀 처리
       if(isHugaGong){
         if(country&&!skipCountries.has(country))lastCountry=country;
         country=lastCountry;
       }
       if(!country||skipCountries.has(country))continue;
-
-      // 메타행 스킵 (최신 이관 날짜, 카탈로그 등)
       const skipRows=new Set(['최신 이관 날짜','카탈로그','인드라이브','간단 사용설명서','기준 국가 리스트']);
       const gubun=isHugaGong?String(row[1]||'').trim():'';
       if(isHugaGong&&skipRows.has(gubun))continue;
-      if(isHugaGong&&!gubun)continue; // 구분 없는 행 스킵
-
+      if(isHugaGong&&!gubun)continue;
       const wtype=normalizeWorkType(sheetName,gubun);
-
       for(let c=0;c<prodNames.length;c++){
         const prod=prodNames[c];if(!prod)continue;
         const cellVal=String(row[dataColStart+c]||'').trim();
@@ -1622,6 +1637,7 @@ function parseIBSWorkbook(wb){
   });
   return results;
 }
+
 function normalizePart(raw){
   const map={
     'InBody':'인바디','INBODY':'인바디',
