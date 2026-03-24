@@ -1994,6 +1994,46 @@ function loadFromFile(event){
 const autoLoaded = tryAutoLoad();
 fillMxSels();renderDashboard();renderFeed();renderWtypeTabs();renderMatrix();
 if(autoLoaded) showToast('🔄 이전 데이터를 자동으로 복원했습니다');
+// 페이지 열릴 때 Google Sheets에서 자동 불러오기
+autoLoadFromSheets();
+
+function autoLoadFromSheets(){
+  const callbackName='ibsAutoCallback_'+Date.now();
+  const script=document.createElement('script');
+  window[callbackName]=function(data){
+    try{
+      if(data.success&&data.entries&&Object.keys(data.entries).length>0){
+        const local=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');
+        const merged={
+          entries:data.entries,
+          products:local.products||{},
+          deadlines:local.deadlines||[],
+          updateLog:local.updateLog||[],
+          hugagongSubs:local.hugagongSubs||[...HUGAGONG_SUBS_DEFAULT],
+          customTypes:local.customTypes||[]
+        };
+        PARTS.forEach(p=>merged.products[p]=merged.products[p]||[]);
+        Object.keys(data.entries).forEach(k=>{
+          const[part,product]=k.split('|');
+          if(!merged.products[part])merged.products[part]=[];
+          if(!merged.products[part].includes(product))merged.products[part].push(product);
+        });
+        applyLoadData(merged);
+        try{localStorage.setItem(STORAGE_KEY,JSON.stringify(merged));}catch(e){}
+        renderDashboard();renderFeed();renderPartTabs();renderWtypeTabs();renderMatrix();renderPriority();
+        showToast('✅ 최신 데이터를 불러왔습니다');
+      }
+    }catch(e){}
+    delete window[callbackName];
+    if(script.parentNode)script.parentNode.removeChild(script);
+  };
+  script.src=GAS_URL+'?callback='+callbackName+'&t='+Date.now();
+  script.onerror=function(){
+    delete window[callbackName];
+    if(script.parentNode)script.parentNode.removeChild(script);
+  };
+  document.head.appendChild(script);
+}
 </script>
 </body>
 </html>
