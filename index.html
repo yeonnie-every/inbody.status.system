@@ -1320,7 +1320,7 @@ function renderMatrix(){
       }
       h+=`<td class="prod-td" style="position:sticky;left:55px;z-index:1;min-width:140px">${base}</td>`;
       countries.forEach(country=>{
-        const prodKey=country==='공통'?base:`${base} (${country})`;
+        const prodKeyFull=`${base} (${country})`;const prodKey=filtered.some(e=>e.product===prodKeyFull)?prodKeyFull:base;
         const typeEntries=filtered.filter(e=>e.product===prodKey&&e.part===part);
         if(!typeEntries.length){h+=`<td style="color:#d1d5db;font-size:12px;text-align:center">—</td>`;return;}
         if(currentWtype!=='전체'){
