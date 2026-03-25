@@ -503,6 +503,18 @@ canvas{max-height:200px}
     <!-- ===== UPLOAD ===== -->
     <div class="page" id="page-upload">
       <div class="ph"><h1>데이터 업로드</h1><p>파일 업로드 또는 직접 입력으로 데이터를 추가합니다.</p></div>
+      <!-- 현재 데이터 현황 배너 -->
+      <div id="current-data-banner" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #93c5fd;border-radius:12px;padding:16px 20px;margin-bottom:18px;display:none">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="font-size:28px">📦</div>
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:13px;color:#1d4ed8;margin-bottom:3px">현재 로드된 데이터</div>
+            <div id="current-data-info" style="font-size:12px;color:#3b82f6;line-height:1.8"></div>
+          </div>
+          <button onclick="clearAllData()" style="padding:7px 14px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">🗑️ 전체 초기화</button>
+        </div>
+      </div>
+
       <!-- 샘플 데이터 배너 -->
       <div style="background:linear-gradient(135deg,#f5ecee,#fdf2f4);border:1px solid #e8c8ce;border-radius:12px;padding:16px 20px;margin-bottom:18px;display:flex;align-items:center;gap:14px">
         <div style="font-size:28px">🗂️</div>
@@ -572,10 +584,14 @@ canvas{max-height:200px}
           <div class="card-body">
             <p style="font-size:13px;color:var(--text2);margin-bottom:10px" id="preview-info"></p>
             <div class="preview-wrap" id="preview-wrap"></div>
-            <div style="margin-top:14px;display:flex;gap:10px;align-items:center">
-              <button class="btn btn-primary" onclick="confirmUpload()">✅ 데이터 적용하기</button>
+            <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <button class="btn btn-primary" onclick="confirmUpload('merge')" style="background:#2e7d6e">➕ 기존 데이터에 추가/병합</button>
+              <button class="btn btn-primary" onclick="confirmUpload('replace')" style="background:#ef4444">🔄 전체 교체</button>
               <button class="btn btn-secondary" onclick="cancelPreview()">취소</button>
-              <span style="font-size:12px;color:var(--red)">⚠️ 적용 시 기존 데이터가 교체됩니다.</span>
+            </div>
+            <div style="margin-top:8px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;font-size:12px;color:#166534;line-height:1.8">
+              <b>➕ 추가/병합</b>: 기존 데이터를 유지하면서 새 항목 추가 (같은 키가 있으면 업데이트)<br>
+              <b>🔄 전체 교체</b>: 기존 데이터를 모두 지우고 이 파일 데이터로 교체
             </div>
           </div>
         </div>
@@ -906,7 +922,7 @@ function goPage(id,el){
   if(id==='search'){fillSel('sf');doSearch()}
   if(id==='update'){fillSel('uf');renderUpdateTable();fillFormSels();renderProdMgr()}
   if(id==='deadline'){fillDlSels();renderDlList();renderPriorityDash()}
-  if(id==='upload'){manualLog=[];renderManualLog();}
+  if(id==='upload'){manualLog=[];renderManualLog();updateDataBanner();}
   if(id==='types')renderTypes();
 }
 
@@ -1692,38 +1708,83 @@ function cleanupWorkTypes(){
   });
   workTypes=buildWorkTypes().concat(customTypes);
 }
-function confirmUpload(){
+function confirmUpload(mode){
+  mode=mode||'merge'; // 기본값: 병합
   const{type,data,headers,parsed}=pendingUpload;
   if(parsed){
-    entries={};products={};updateLog=[];deadlines=[];PARTS.forEach(p=>products[p]=[]);
+    if(mode==='replace'){
+      entries={};products={};updateLog=[];deadlines=[];PARTS.forEach(p=>products[p]=[]);
+    } else {
+      // 병합 모드: 기존 데이터 유지
+      PARTS.forEach(p=>{ if(!products[p]) products[p]=[]; });
+    }
     data.forEach(r=>{if(r.type&&!workTypes.includes(r.type))workTypes.push(r.type)});
     cleanupWorkTypes();
-    let ok=0,skip=0;
+    let ok=0,skip=0,updated=0;
     data.forEach(r=>{
       const{part,product,country,type:wtype,status,version,owner,note}=r;
       if(!part||!product||!wtype){skip++;return}
       const prodKey=country?`${product} (${country})`:product;
       if(!products[part])products[part]=[];
       if(!products[part].includes(prodKey))products[part].push(prodKey);
-      entries[`${part}|${prodKey}|${wtype}`]={status,version:'',owner:'',note,updatedAt:new Date().toISOString()};ok++;
+      const entryKey=`${part}|${prodKey}|${wtype}`;
+      if(mode==='merge'&&entries[entryKey]){updated++;}
+      entries[entryKey]={status,version:version||'',owner:owner||'',note:note||'',updatedAt:new Date().toISOString()};ok++;
     });
-    updateLog.unshift({text:`엑셀 업로드 — ${ok}개 항목 적용`,time:new Date().toISOString()});
-    showToast(`✅ ${ok}개 항목 적용${skip?` (${skip}개 스킵)`:''}`);
+    const msg=mode==='merge'
+      ?`병합 완료 — ${ok}개 항목 (신규 ${ok-updated}, 업데이트 ${updated})${skip?` (${skip}개 스킵)`:''}`
+      :`교체 완료 — ${ok}개 항목 적용${skip?` (${skip}개 스킵)`:''}`;
+    updateLog.unshift({text:`📊 엑셀 업로드 (${mode==='merge'?'병합':'교체'}) — ${ok}개 항목`,time:new Date().toISOString()});
+    showToast(`✅ ${msg}`);
   } else {
-    deadlines=[];let ok=0;
+    if(mode==='replace')deadlines=[];
+    let ok=0;
     (data||[]).forEach((row,i)=>{
       const gi=(n)=>{const idx=(headers||[]).indexOf(n);return idx>=0?String(row[idx]??'').trim():''};
       const part=gi('파트'),product=gi('제품명'),wtype=gi('작업유형'),date=gi('기한'),assignee=gi('담당자'),prio=PRIO_MAP[gi('우선순위')]||'mid',memo=gi('메모');
       if(!part||!product||!wtype||!date)return;
+      // 병합 모드: 같은 키가 있으면 업데이트
+      if(mode==='merge'){
+        const exist=deadlines.findIndex(d=>d.part===part&&d.product===product&&d.type===wtype);
+        if(exist>=0){deadlines[exist]={...deadlines[exist],date,assignee,prio,memo};ok++;return;}
+      }
       deadlines.push({id:Date.now()+i,part,product,type:wtype,date,assignee,prio,memo});ok++;
     });
-    showToast(`✅ ${ok}개 기한 적용`);
+    showToast(`✅ ${ok}개 기한 ${mode==='merge'?'병합':'적용'}`);
   }
   document.getElementById('preview-card').style.display='none';
   autoSave();
+  updateDataBanner();
   renderDashboard();renderFeed();renderWtypeTabs();renderMatrix();renderPriority();
 }
 function cancelPreview(){document.getElementById('preview-card').style.display='none'}
+
+function updateDataBanner(){
+  const banner=document.getElementById('current-data-banner');
+  if(!banner)return;
+  const total=Object.keys(entries).length;
+  if(total===0){banner.style.display='none';return;}
+  banner.style.display='block';
+  const partCounts={};
+  Object.keys(entries).forEach(k=>{
+    const part=k.split('|')[0];
+    partCounts[part]=(partCounts[part]||0)+1;
+  });
+  const partInfo=Object.entries(partCounts).map(([p,c])=>`${p}: ${c}건`).join(' · ');
+  document.getElementById('current-data-info').innerHTML=
+    `총 <b>${total}건</b> · ${Object.keys(partCounts).length}개 파트<br>${partInfo}`;
+}
+
+function clearAllData(){
+  if(!confirm('정말 모든 데이터를 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.'))return;
+  entries={};products={};updateLog=[];deadlines=[];
+  PARTS.forEach(p=>products[p]=[]);
+  hugagongSubs=[...HUGAGONG_SUBS_DEFAULT];customTypes=[];workTypes=buildWorkTypes();
+  try{localStorage.removeItem(STORAGE_KEY);}catch(e){}
+  updateDataBanner();
+  renderDashboard();renderFeed();renderWtypeTabs();renderMatrix();renderPriority();
+  showToast('🗑️ 전체 데이터가 초기화되었습니다');
+}
 function downloadTemplate(type){
   let d;
   if(type==='entries'){d=[['파트','제품명','국가','작업유형','상태','최신버전','담당자','비고'],['인바디','InBody 970','한국','제품UI','완료','v3.0.0','홍길동',''],['인바디','InBody 970','일본','제품UI','진행중','','김민준',''],['혈압계','BPBIO 320','한국','인증','미착수','','','']]}
@@ -1970,10 +2031,10 @@ function loadFromSheets(){
 
 // 🔄 자동저장 (로컬스토리지 + Google Sheets)
 function autoSave(){
-  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(buildSaveData()));}catch(e){}
-  // 구글 시트에도 조용히 저장
   const data=buildSaveData();
-  fetch(GAS_URL,{method:'POST',body:JSON.stringify(data)}).catch(()=>{});
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(data));}catch(e){}
+  // 구글 시트에도 조용히 저장
+  fetch(GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(data)}).catch(()=>{});
 }
 
 // 브라우저 로컬스토리지에서 자동 복원
