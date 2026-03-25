@@ -96,9 +96,9 @@ table.mx tr:hover td.prod-td{background:#f0f4ff}
 
 /* ── BADGES ── */
 .sb{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
-.sb.done{background:var(--green-light);color:#065f46}
-.sb.inprog{background:var(--orange-light);color:#92400e}
-.sb.none{background:var(--gray-light);color:#6b7280}
+.sb.done{background:var(--gray-light);color:#6b7280}
+.sb.inprog{background:var(--green-light);color:#065f46}
+.sb.none{background:var(--orange-light);color:#92400e}
 .sb.na{background:var(--purple-light);color:#5b21b6}
 .date-cell{font-size:11px;color:var(--text2);display:block;margin-top:2px}
 .dl-chip{display:inline-block;padding:1px 6px;border-radius:6px;font-size:10px;font-weight:700;margin-top:2px}
@@ -368,9 +368,9 @@ canvas{max-height:200px}
       </div>
       <div class="stats-row">
         <div class="stat-card"><div class="stat-icon si-blue">📦</div><div class="stat-info"><div class="sv" id="st-total">0</div><div class="sl">전체 항목</div><div class="sp sp-blue" id="st-types">0개 유형</div></div></div>
-        <div class="stat-card"><div class="stat-icon si-green">✅</div><div class="stat-info"><div class="sv" id="st-done">0</div><div class="sl">완료</div><div class="sp sp-green" id="st-done-p">0%</div></div></div>
-        <div class="stat-card"><div class="stat-icon si-orange">🔄</div><div class="stat-info"><div class="sv" id="st-prog">0</div><div class="sl">진행중</div><div class="sp sp-orange" id="st-prog-p">0%</div></div></div>
-        <div class="stat-card"><div class="stat-icon si-gray">⏳</div><div class="stat-info"><div class="sv" id="st-none">0</div><div class="sl">미착수</div><div class="sp" style="color:var(--text2)" id="st-none-p">0%</div></div></div>
+        <div class="stat-card"><div class="stat-icon si-gray">✅</div><div class="stat-info"><div class="sv" id="st-done">0</div><div class="sl">완료</div><div class="sp" style="color:#6b7280" id="st-done-p">0%</div></div></div>
+        <div class="stat-card"><div class="stat-icon si-green">🔄</div><div class="stat-info"><div class="sv" id="st-prog">0</div><div class="sl">진행중</div><div class="sp sp-green" id="st-prog-p">0%</div></div></div>
+        <div class="stat-card"><div class="stat-icon si-orange">⏳</div><div class="stat-info"><div class="sv" id="st-none">0</div><div class="sl">미착수</div><div class="sp sp-orange" id="st-none-p">0%</div></div></div>
       </div>
       <div class="g2">
         <div class="card">
@@ -409,9 +409,9 @@ canvas{max-height:200px}
       <!-- 작업유형 상단 탭 -->
       <div class="wtype-tabs" id="wtype-tabs" style="margin-top:-10px"></div>
       <div class="card">
-        <div class="card-head">
-          <div class="card-head-title" id="matrix-title">전체</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="card-head" style="flex-wrap:wrap;gap:10px">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <div class="card-head-title" id="matrix-title">전체</div>
             <select class="fsel" id="mx-status" onchange="renderMatrix()">
               <option value="">전체 상태</option><option value="done">완료</option><option value="inprog">진행중</option><option value="none">미착수</option><option value="na">해당없음</option>
             </select>
@@ -1111,10 +1111,10 @@ function renderDashboard(){
   }).join('');
   const ctx1=document.getElementById('donutChart').getContext('2d');
   if(donutInst)donutInst.destroy();
-  donutInst=new Chart(ctx1,{type:'doughnut',data:{labels:['완료','진행중','미착수','해당없음'],datasets:[{data:[done,prog,none,all.filter(e=>e.status==='na').length],backgroundColor:['#7c2d3e','#c4883a','#e8d5d9','#b8a0c8'],borderWidth:2,borderColor:'#fff'}]},options:{plugins:{legend:{position:'right',labels:{font:{size:12},color:'#1a1f2e'}}},cutout:'65%'}});
+  donutInst=new Chart(ctx1,{type:'doughnut',data:{labels:['완료','진행중','미착수','해당없음'],datasets:[{data:[done,prog,none,all.filter(e=>e.status==='na').length],backgroundColor:['#9ca3af','#2e7d6e','#c97a2a','#b8a0c8'],borderWidth:2,borderColor:'#fff'}]},options:{plugins:{legend:{position:'right',labels:{font:{size:12},color:'#1a1f2e'}}},cutout:'65%'}});
   const ctx2=document.getElementById('barChart').getContext('2d');
   if(barInst)barInst.destroy();
-  barInst=new Chart(ctx2,{type:'bar',data:{labels:PARTS,datasets:[{label:'완료',data:PARTS.map(p=>all.filter(e=>e.part===p&&e.status==='done').length),backgroundColor:'#7c2d3e'},{label:'진행중',data:PARTS.map(p=>all.filter(e=>e.part===p&&e.status==='inprog').length),backgroundColor:'#c4883a'},{label:'미착수',data:PARTS.map(p=>all.filter(e=>e.part===p&&e.status==='none').length),backgroundColor:'#e8d5d9'}]},options:{plugins:{legend:{labels:{font:{size:12},color:'#1a1f2e'}}},scales:{x:{stacked:true},y:{stacked:true,ticks:{stepSize:1}}},responsive:true}});
+  barInst=new Chart(ctx2,{type:'bar',data:{labels:PARTS,datasets:[{label:'완료',data:PARTS.map(p=>all.filter(e=>e.part===p&&e.status==='done').length),backgroundColor:'#9ca3af'},{label:'진행중',data:PARTS.map(p=>all.filter(e=>e.part===p&&e.status==='inprog').length),backgroundColor:'#2e7d6e'},{label:'미착수',data:PARTS.map(p=>all.filter(e=>e.part===p&&e.status==='none').length),backgroundColor:'#c97a2a'}]},options:{plugins:{legend:{labels:{font:{size:12},color:'#1a1f2e'}}},scales:{x:{stacked:true},y:{stacked:true,ticks:{stepSize:1}}},responsive:true}});
   const alerts=deadlines.filter(d=>{const e=entries[`${d.part}|${d.product}|${d.type}`];return!(e&&e.status==='done')&&dday(d.date)<=3});
   // 비고 날짜 기반 알림 (진행중 항목 중 D-3 이내)
   const noteAlerts=allEntries().filter(e=>{
