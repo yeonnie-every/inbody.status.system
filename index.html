@@ -276,7 +276,7 @@ canvas{max-height:200px}
       <div class="rb-icon">⭐</div>
       <div class="rb-info">
         <div class="rb-name">Master</div>
-        <div class="rb-desc">기한 관리, 유형 관리 포함 전체 권한</div>
+        <div class="rb-desc">기한 관리, 유형/파트 관리 포함 전체 권한</div>
       </div>
     </button>
     <div class="ls-version">IBS v2.2 · InBody Status System</div>
@@ -313,7 +313,7 @@ canvas{max-height:200px}
       <span class="ni">📅</span><span>기한 관리</span>
     </div>
     <div class="nav-item" id="ni-types" style="display:none" onclick="goPage('types',this)">
-      <span class="ni">⚙️</span><span>유형 관리</span>
+      <span class="ni">⚙️</span><span>유형/파트 관리</span>
     </div>
     <div class="nav-section" style="font-size:9px;font-weight:800;color:rgba(255,255,255,.55);letter-spacing:2px;text-transform:uppercase;padding:14px 18px 6px">SEARCH</div>
     <div class="nav-item" onclick="goPage('search',this)" id="ni-search">
@@ -734,7 +734,23 @@ canvas{max-height:200px}
 
     <!-- ===== TYPES ===== -->
     <div class="page" id="page-types">
-      <div class="ph"><h1>유형 관리</h1><p>작업 유형 추가 / 삭제 (Master 전용)</p></div>
+      <div class="ph"><h1>유형 / 파트 관리</h1><p>작업 유형 및 파트 추가 / 삭제 (Master 전용)</p></div>
+
+      <!-- 파트 관리 -->
+      <div class="card" style="margin-bottom:18px">
+        <div class="card-head"><div class="card-head-title">📂 파트 관리</div></div>
+        <div class="card-body">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:12px">파트를 추가하거나 삭제할 수 있습니다. 삭제 시 해당 파트의 데이터도 함께 삭제됩니다.</div>
+          <div class="type-chips" id="part-chips"></div>
+          <div class="divider"></div>
+          <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">파트 추가</div>
+          <div class="add-row">
+            <input type="text" id="new-part-name" placeholder="새 파트명 (예: 신규파트)">
+            <button class="btn btn-primary" onclick="addPart()">추가</button>
+          </div>
+        </div>
+      </div>
+
       <div class="g2">
         <!-- 기본 유형 -->
         <div class="card">
@@ -854,8 +870,12 @@ canvas{max-height:200px}
 <script>
 const ACCOUNTS={manager:{pw:'mgr1234',role:'manager'},master:{pw:'mst1234',role:'master'}};
 let role=null,currentDetailKey=null;
-const PARTS=['인바디','신장계','컨슈머','혈압계','KOROT','W파트','헬스케어'];
-const PART_COLORS=['#7c2d3e','#9e3a50','#c4883a','#b8648a','#8b5a7a','#c4703a','#a05070'];
+const DEFAULT_PARTS=['인바디','신장계','혈압계','KOROT','W파트','헬스케어'];
+let PARTS=[...DEFAULT_PARTS];
+const PART_COLOR_POOL=['#7c2d3e','#9e3a50','#c4883a','#b8648a','#8b5a7a','#c4703a','#a05070','#2563eb','#059669','#d97706','#7c3aed','#dc2626'];
+function getPartColor(i){ return PART_COLOR_POOL[i % PART_COLOR_POOL.length]; }
+// 하위호환: PART_COLORS 참조하는 코드용
+let PART_COLORS=PARTS.map((_,i)=>getPartColor(i));
 // 작업유형: 일반 유형 + 후가공(하위유형 포함)
 const BASE_TYPES=['제품UI','인증'];
 const HUGAGONG_SUBS_DEFAULT=['명판','매뉴얼','조립설명서','기타'];
@@ -880,7 +900,7 @@ function dday(ds){return Math.ceil((new Date(ds)-new Date().setHours(0,0,0,0))/8
 function allEntries(){return Object.entries(entries).map(([k,v])=>{const[p,pr,tp]=k.split('|');return{key:k,part:p,product:pr,type:tp,...v}})}
 
 // ── NAV ──
-const PAGE_TITLES={dashboard:'대시보드',status:'프로젝트 현황',search:'검색',update:'항목 관리',upload:'데이터 업로드',deadline:'기한 관리',types:'유형 관리'};
+const PAGE_TITLES={dashboard:'대시보드',status:'프로젝트 현황',search:'검색',update:'항목 관리',upload:'데이터 업로드',deadline:'기한 관리',types:'유형/파트 관리'};
 const PAGE_ROLES={dashboard:['user','manager','master'],roadmap:['user','manager','master'],status:['user','manager','master'],search:['user','manager','master'],update:['manager','master'],upload:['manager','master'],deadline:['master'],types:['master']};
 function goPage(id,el){
   // 권한 체크
@@ -907,7 +927,7 @@ function goPage(id,el){
     activeEl.style.fontWeight='700';
     activeEl.querySelectorAll('span').forEach(s=>{s.style.color='#fff';s.style.fontWeight='700'});
   }
-  const korTitles={dashboard:'대시보드',roadmap:'로드맵',status:'프로젝트 현황',search:'검색',update:'항목 관리',upload:'데이터 업로드',deadline:'기한 관리',types:'유형 관리'};
+  const korTitles={dashboard:'대시보드',roadmap:'로드맵',status:'프로젝트 현황',search:'검색',update:'항목 관리',upload:'데이터 업로드',deadline:'기한 관리',types:'유형/파트 관리'};
   const engTitles={dashboard:'Dashboard',roadmap:'Roadmap',status:'Project Status',search:'Search',update:'Update',upload:'Upload',deadline:'Deadline',types:'Types'};
   document.getElementById('topbar-title').textContent=korTitles[id]||id;
   const pageEl=document.getElementById('page-'+id);
@@ -1724,6 +1744,8 @@ function confirmUpload(mode){
     data.forEach(r=>{
       const{part,product,country,type:wtype,status,version,owner,note}=r;
       if(!part||!product||!wtype){skip++;return}
+      // 새 파트 자동 추가
+      if(!PARTS.includes(part)){PARTS.push(part);PART_COLORS=PARTS.map((_,i)=>getPartColor(i));}
       const prodKey=country?`${product} (${country})`:product;
       if(!products[part])products[part]=[];
       if(!products[part].includes(prodKey))products[part].push(prodKey);
@@ -1778,6 +1800,7 @@ function updateDataBanner(){
 function clearAllData(){
   if(!confirm('정말 모든 데이터를 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.'))return;
   entries={};products={};updateLog=[];deadlines=[];
+  PARTS=[...DEFAULT_PARTS];PART_COLORS=PARTS.map((_,i)=>getPartColor(i));
   PARTS.forEach(p=>products[p]=[]);
   hugagongSubs=[...HUGAGONG_SUBS_DEFAULT];customTypes=[];workTypes=buildWorkTypes();
   try{localStorage.removeItem(STORAGE_KEY);}catch(e){}
@@ -1834,6 +1857,11 @@ function syncWorkTypes(){
   renderWtypeTabs();
 }
 function renderTypes(){
+  // 파트 관리
+  const partEl=document.getElementById('part-chips');
+  if(partEl)partEl.innerHTML=PARTS.map((p,i)=>{
+    return`<div class="type-chip" style="background:${getPartColor(i)}22;color:${getPartColor(i)};border:1px solid ${getPartColor(i)}44">${p} <span class="xbtn" onclick="delPart('${p}')">×</span></div>`;
+  }).join('');
   // 기본 유형 (삭제 불가)
   const baseEl=document.getElementById('base-type-chips');
   if(baseEl)baseEl.innerHTML=BASE_TYPES.map(t=>`<div class="type-chip" style="background:#e0f2ee;color:#065f46">${t}</div>`).join('');
@@ -1851,6 +1879,35 @@ function renderTypes(){
   // 전체 미리보기
   const allEl=document.getElementById('all-type-chips');
   if(allEl)allEl.innerHTML=workTypes.map(t=>`<div class="type-chip" style="background:#f3f4f6;color:#374151">${t}</div>`).join('');
+}
+function addPart(){
+  const v=document.getElementById('new-part-name').value.trim();
+  if(!v){showToast('파트명을 입력해주세요');return}
+  if(PARTS.includes(v)){showToast('이미 존재하는 파트입니다');return}
+  PARTS.push(v);
+  PART_COLORS=PARTS.map((_,i)=>getPartColor(i));
+  if(!products[v])products[v]=[];
+  document.getElementById('new-part-name').value='';
+  autoSave();
+  renderTypes();renderDashboard();
+  showToast(`✅ '${v}' 파트 추가됨`);
+}
+function delPart(p){
+  if(PARTS.length<=1){showToast('최소 1개 파트는 필요합니다');return}
+  const cnt=Object.keys(entries).filter(k=>k.startsWith(p+'|')).length;
+  const msg=cnt>0
+    ?`'${p}' 파트를 삭제하시겠습니까?\n이 파트에 속한 ${cnt}건의 데이터도 함께 삭제됩니다.`
+    :`'${p}' 파트를 삭제하시겠습니까?`;
+  if(!confirm(msg))return;
+  // 해당 파트 데이터 삭제
+  Object.keys(entries).forEach(k=>{if(k.startsWith(p+'|'))delete entries[k]});
+  delete products[p];
+  deadlines=deadlines.filter(d=>d.part!==p);
+  PARTS=PARTS.filter(x=>x!==p);
+  PART_COLORS=PARTS.map((_,i)=>getPartColor(i));
+  autoSave();
+  renderTypes();renderDashboard();
+  showToast(`🗑️ '${p}' 파트 삭제됨`);
 }
 function addCustomType(){
   const v=document.getElementById('new-custom-type').value.trim();
@@ -1943,7 +2000,7 @@ const GAS_URL='https://script.google.com/macros/s/AKfycbzvZtuCy-SeUDiSoHrVu1TsAl
 function buildSaveData(){
   return {
     entries, products, deadlines, updateLog,
-    hugagongSubs, customTypes,
+    hugagongSubs, customTypes, parts: PARTS,
     savedAt: new Date().toISOString()
   };
 }
@@ -1954,6 +2011,7 @@ function applyLoadData(data){
   updateLog  = data.updateLog  || [];
   hugagongSubs = data.hugagongSubs || [...HUGAGONG_SUBS_DEFAULT];
   customTypes  = data.customTypes  || [];
+  if(data.parts && data.parts.length > 0){ PARTS = data.parts; PART_COLORS = PARTS.map((_,i)=>getPartColor(i)); }
   PARTS.forEach(p=>{ if(!products[p]) products[p]=[]; });
   workTypes = buildWorkTypes().concat(customTypes);
 }
