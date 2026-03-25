@@ -413,7 +413,7 @@ canvas{max-height:200px}
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <div class="card-head-title" id="matrix-title">전체</div>
             <select class="fsel" id="mx-status" onchange="renderMatrix()">
-              <option value="">전체 상태</option><option value="done">완료</option><option value="inprog">진행중</option><option value="none">미착수</option><option value="na">해당없음</option>
+              <option value="">전체 상태</option>
             </select>
             <select class="fsel" id="mx-country" onchange="renderMatrix()"><option value="">전체 국가/언어</option></select>
           </div>
@@ -435,7 +435,7 @@ canvas{max-height:200px}
         <select class="fsel" id="sf-part" onchange="doSearch()"><option value="">전체 파트</option></select>
         <select class="fsel" id="sf-type" onchange="doSearch()"><option value="">전체 유형</option></select>
         <select class="fsel" id="sf-status" onchange="doSearch()">
-          <option value="">전체 상태</option><option value="done">완료</option><option value="inprog">진행중</option><option value="none">미착수</option><option value="na">해당없음</option>
+          <option value="">전체 상태</option>
         </select>
       </div>
       <div id="search-results"></div>
@@ -464,7 +464,7 @@ canvas{max-height:200px}
               </div>
               <div class="form-group"><label>작업유형</label><select id="f-type"></select></div>
               <div class="form-group"><label>상태</label>
-                <select id="f-status"><option value="none">미착수</option><option value="inprog">진행중</option><option value="done">완료</option><option value="na">해당없음</option></select>
+                <select id="f-status"></select>
               </div>
               <div class="form-group"><label>최신 버전</label><input type="text" id="f-version" placeholder="예: v2.1.0"></div>
               <div class="form-group"><label>담당자</label><input type="text" id="f-owner" placeholder="예: 홍길동"></div>
@@ -625,7 +625,7 @@ canvas{max-height:200px}
                   </div>
                   <div class="form-group"><label>작업유형</label><select id="mi-type"></select></div>
                   <div class="form-group"><label>상태</label>
-                    <select id="mi-status"><option value="none">미착수</option><option value="inprog">진행중</option><option value="done">완료</option><option value="na">해당없음</option></select>
+                    <select id="mi-status"></select>
                   </div>
                   <div class="form-group"><label>최신 버전</label><input type="text" id="mi-version" placeholder="예: v2.1.0"></div>
                   <div class="form-group"><label>담당자</label><input type="text" id="mi-owner" placeholder="예: 홍길동"></div>
@@ -789,6 +789,23 @@ canvas{max-height:200px}
           <div class="type-chips" id="all-type-chips"></div>
         </div>
       </div>
+
+      <!-- 상태 관리 -->
+      <div class="card" style="margin-top:18px">
+        <div class="card-head"><div class="card-head-title">🏷️ 상태 관리</div></div>
+        <div class="card-body">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:12px">상태를 추가/삭제하고 색상을 지정할 수 있습니다. 삭제 시 해당 상태의 항목은 '미착수'로 변경됩니다.</div>
+          <div id="status-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px"></div>
+          <div class="divider"></div>
+          <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">상태 추가</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <input type="text" id="new-status-id" placeholder="영문 ID (예: review)" style="width:120px;padding:7px 12px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit">
+            <input type="text" id="new-status-label" placeholder="표시명 (예: 검토중)" style="width:120px;padding:7px 12px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit">
+            <input type="color" id="new-status-color" value="#2563eb" title="글자 색상" style="width:36px;height:32px;border:1px solid var(--border);border-radius:6px;cursor:pointer">
+            <button class="btn btn-primary" onclick="addStatus()">추가</button>
+          </div>
+        </div>
+      </div>
     </div>
 
   </div><!-- /content -->
@@ -891,8 +908,27 @@ let donutInst=null,barInst=null;
 let pendingUpload={type:null,data:null,headers:[],parsed:false};
 let currentWtype='전체';
 
-const STATUS_MAP={'완료':'done','진행중':'inprog','미착수':'none','해당없음':'na','O':'done','o':'done','✓':'done','Y':'done','X':'none','x':'none','-':'na','△':'inprog','done':'done','inprog':'inprog','none':'none','na':'na'};
-const STATUS_KO={done:'완료',inprog:'진행중',none:'미착수',na:'해당없음'};
+const DEFAULT_STATUSES=[
+  {id:'done',label:'완료',bg:'#f3f4f6',color:'#6b7280'},
+  {id:'inprog',label:'진행중',bg:'#e0f2ee',color:'#065f46'},
+  {id:'none',label:'미착수',bg:'#faebd7',color:'#92400e'},
+  {id:'na',label:'해당없음',bg:'#ece8f7',color:'#5b21b6'},
+  {id:'planned',label:'예정',bg:'#dbeafe',color:'#1d4ed8'}
+];
+let STATUSES=[...DEFAULT_STATUSES.map(s=>({...s}))];
+
+function getStatusById(id){return STATUSES.find(s=>s.id===id)||{id,label:id,bg:'#f3f4f6',color:'#6b7280'};}
+function getStatusByLabel(label){return STATUSES.find(s=>s.label===label);}
+function buildStatusMap(){
+  const m={'O':'done','o':'done','✓':'done','Y':'done','X':'none','x':'none','-':'na','△':'inprog'};
+  STATUSES.forEach(s=>{m[s.label]=s.id;m[s.id]=s.id;});
+  return m;
+}
+function buildStatusKO(){
+  const m={};STATUSES.forEach(s=>{m[s.id]=s.label;});return m;
+}
+let STATUS_MAP=buildStatusMap();
+let STATUS_KO=buildStatusKO();
 const PRIO_MAP={'높음':'high','중간':'mid','낮음':'low','high':'high','mid':'mid','low':'low'};
 
 function fmtDate(d){return d.toISOString().split('T')[0]}
@@ -939,10 +975,10 @@ function goPage(id,el){
   }
   if(id==='dashboard'){renderDashboard();renderFeed()}
   if(id==='status'){fillMxSels();renderPartTabs();fillCountrySel();renderWtypeTabs();renderMatrix();renderPriority()}
-  if(id==='search'){fillSel('sf');doSearch()}
-  if(id==='update'){fillSel('uf');renderUpdateTable();fillFormSels();renderProdMgr()}
+  if(id==='search'){fillSel('sf');fillStatusSels();doSearch()}
+  if(id==='update'){fillSel('uf');renderUpdateTable();fillFormSels();renderProdMgr();fillStatusSels()}
   if(id==='deadline'){fillDlSels();renderDlList();renderPriorityDash()}
-  if(id==='upload'){manualLog=[];renderManualLog();updateDataBanner();}
+  if(id==='upload'){manualLog=[];renderManualLog();updateDataBanner();fillStatusSels();}
   if(id==='types')renderTypes();
 }
 
@@ -1063,10 +1099,8 @@ function submitRequest(){
 
 // ── HELPERS ──
 function sbHtml(s){
-  if(s==='done')return'<span class="sb done">완료</span>';
-  if(s==='inprog')return'<span class="sb inprog">진행중</span>';
-  if(s==='na')return'<span class="sb na">해당없음</span>';
-  return'<span class="sb none">미착수</span>';
+  const st=getStatusById(s);
+  return`<span class="sb" style="background:${st.bg};color:${st.color}">${st.label}</span>`;
 }
 function timeAgo(iso){const d=(Date.now()-new Date(iso))/1000;if(d<60)return'방금 전';if(d<3600)return`${Math.floor(d/60)}분 전`;if(d<86400)return`${Math.floor(d/3600)}시간 전`;return`${Math.floor(d/86400)}일 전`}
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600)}
@@ -1079,9 +1113,25 @@ function fillSel(pfx){
 let currentPart='전체';
 
 function fillMxSels(){
-  // 파트 탭은 renderPartTabs()에서 처리
   renderPartTabs();
   fillCountrySel();
+  fillStatusSels();
+}
+
+// 모든 상태 select를 동적으로 채움
+function fillStatusSels(){
+  const statusOpts=STATUSES.map(s=>`<option value="${s.id}">${s.label}</option>`).join('');
+  // 필터용 (전체 상태 포함)
+  const filterOpts=`<option value="">전체 상태</option>`+statusOpts;
+  ['mx-status','sf-status'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){const v=el.value;el.innerHTML=filterOpts;el.value=v;}
+  });
+  // 폼용 (전체 상태 없음)
+  ['f-status','mi-status'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){const v=el.value;el.innerHTML=statusOpts;if(v)el.value=v;}
+  });
 }
 
 function renderPartTabs(){
@@ -1131,10 +1181,14 @@ function renderDashboard(){
   }).join('');
   const ctx1=document.getElementById('donutChart').getContext('2d');
   if(donutInst)donutInst.destroy();
-  donutInst=new Chart(ctx1,{type:'doughnut',data:{labels:['완료','진행중','미착수','해당없음'],datasets:[{data:[done,prog,none,all.filter(e=>e.status==='na').length],backgroundColor:['#9ca3af','#2e7d6e','#c97a2a','#b8a0c8'],borderWidth:2,borderColor:'#fff'}]},options:{plugins:{legend:{position:'right',labels:{font:{size:12},color:'#1a1f2e'}}},cutout:'65%'}});
+  const donutLabels=STATUSES.map(s=>s.label);
+  const donutData=STATUSES.map(s=>all.filter(e=>e.status===s.id).length);
+  const donutColors=STATUSES.map(s=>s.color);
+  donutInst=new Chart(ctx1,{type:'doughnut',data:{labels:donutLabels,datasets:[{data:donutData,backgroundColor:donutColors,borderWidth:2,borderColor:'#fff'}]},options:{plugins:{legend:{position:'right',labels:{font:{size:12},color:'#1a1f2e'}}},cutout:'65%'}});
   const ctx2=document.getElementById('barChart').getContext('2d');
   if(barInst)barInst.destroy();
-  barInst=new Chart(ctx2,{type:'bar',data:{labels:PARTS,datasets:[{label:'완료',data:PARTS.map(p=>all.filter(e=>e.part===p&&e.status==='done').length),backgroundColor:'#9ca3af'},{label:'진행중',data:PARTS.map(p=>all.filter(e=>e.part===p&&e.status==='inprog').length),backgroundColor:'#2e7d6e'},{label:'미착수',data:PARTS.map(p=>all.filter(e=>e.part===p&&e.status==='none').length),backgroundColor:'#c97a2a'}]},options:{plugins:{legend:{labels:{font:{size:12},color:'#1a1f2e'}}},scales:{x:{stacked:true},y:{stacked:true,ticks:{stepSize:1}}},responsive:true}});
+  const barDatasets=STATUSES.filter(s=>s.id!=='na').map(s=>({label:s.label,data:PARTS.map(p=>all.filter(e=>e.part===p&&e.status===s.id).length),backgroundColor:s.color}));
+  barInst=new Chart(ctx2,{type:'bar',data:{labels:PARTS,datasets:barDatasets},options:{plugins:{legend:{labels:{font:{size:12},color:'#1a1f2e'}}},scales:{x:{stacked:true},y:{stacked:true,ticks:{stepSize:1}}},responsive:true}});
   const alerts=deadlines.filter(d=>{const e=entries[`${d.part}|${d.product}|${d.type}`];return!(e&&e.status==='done')&&dday(d.date)<=3});
   // 비고 날짜 기반 알림 (진행중 항목 중 D-3 이내)
   const noteAlerts=allEntries().filter(e=>{
@@ -1689,10 +1743,17 @@ function normalizePart(raw){
 }
 function normalizeStatus(v){
   const u=v.toUpperCase().trim();
-  if(['O','✓','Y','YES','완료','DONE','◯','〇','완'].includes(u))return'done';
-  if(['△','진행중','ING','INPROG','진행','진행 중'].includes(u))return'inprog';
-  if(['-','N/A','해당없음','NA','해당 없음'].includes(u))return'na';
-  if(['X','N','NO','미착수','없음',''].includes(u))return'none';
+  const t=v.trim();
+  // 동적 상태 라벨 매칭 (사용자 추가 상태 포함)
+  const byLabel=STATUSES.find(s=>s.label===t || s.label.toUpperCase()===u);
+  if(byLabel)return byLabel.id;
+  const byId=STATUSES.find(s=>s.id===t || s.id.toUpperCase()===u);
+  if(byId)return byId.id;
+  // 기존 매핑
+  if(['O','✓','Y','YES','DONE','◯','〇','완'].includes(u))return'done';
+  if(['△','ING','INPROG','진행','진행 중'].includes(u))return'inprog';
+  if(['-','N/A','NA','해당 없음'].includes(u))return'na';
+  if(['X','N','NO','없음',''].includes(u))return'none';
   // 날짜 형식 (예: L_241212, D_250210 등) → 완료로 처리
   if(v.match(/^[A-Z].*_\d{6}$/))return'done';
   if(v)return'inprog';
@@ -1801,6 +1862,7 @@ function clearAllData(){
   if(!confirm('정말 모든 데이터를 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.'))return;
   entries={};products={};updateLog=[];deadlines=[];
   PARTS=[...DEFAULT_PARTS];PART_COLORS=PARTS.map((_,i)=>getPartColor(i));
+  STATUSES=[...DEFAULT_STATUSES.map(s=>({...s}))];STATUS_MAP=buildStatusMap();STATUS_KO=buildStatusKO();
   PARTS.forEach(p=>products[p]=[]);
   hugagongSubs=[...HUGAGONG_SUBS_DEFAULT];customTypes=[];workTypes=buildWorkTypes();
   try{localStorage.removeItem(STORAGE_KEY);}catch(e){}
@@ -1879,6 +1941,46 @@ function renderTypes(){
   // 전체 미리보기
   const allEl=document.getElementById('all-type-chips');
   if(allEl)allEl.innerHTML=workTypes.map(t=>`<div class="type-chip" style="background:#f3f4f6;color:#374151">${t}</div>`).join('');
+  // 상태 관리
+  const stEl=document.getElementById('status-chips');
+  if(stEl)stEl.innerHTML=STATUSES.map(s=>{
+    return`<div class="type-chip" style="background:${s.bg};color:${s.color};border:1px solid ${s.color}33">
+      <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${s.color};margin-right:4px"></span>
+      ${s.label} <span style="font-size:10px;color:#999;margin-left:2px">(${s.id})</span>
+      <span class="xbtn" onclick="delStatus('${s.id}')">×</span>
+    </div>`;
+  }).join('');
+}
+function addStatus(){
+  const id=document.getElementById('new-status-id').value.trim().toLowerCase();
+  const label=document.getElementById('new-status-label').value.trim();
+  const color=document.getElementById('new-status-color').value;
+  if(!id||!label){showToast('ID와 표시명을 모두 입력해주세요');return}
+  if(/\s/.test(id)){showToast('ID에 공백은 사용할 수 없습니다');return}
+  if(STATUSES.find(s=>s.id===id)){showToast('이미 존재하는 상태 ID입니다');return}
+  // 배경색은 color + 투명도
+  const bg=color+'18';
+  STATUSES.push({id,label,bg,color});
+  STATUS_MAP=buildStatusMap();STATUS_KO=buildStatusKO();
+  document.getElementById('new-status-id').value='';
+  document.getElementById('new-status-label').value='';
+  autoSave();fillStatusSels();renderTypes();
+  showToast(`✅ '${label}' 상태 추가됨`);
+}
+function delStatus(id){
+  if(STATUSES.length<=1){showToast('최소 1개 상태는 필요합니다');return}
+  const st=getStatusById(id);
+  const cnt=Object.values(entries).filter(e=>e.status===id).length;
+  const msg=cnt>0
+    ?`'${st.label}' 상태를 삭제하시겠습니까?\n${cnt}건의 항목이 '미착수'로 변경됩니다.`
+    :`'${st.label}' 상태를 삭제하시겠습니까?`;
+  if(!confirm(msg))return;
+  // 해당 상태 항목을 none으로 변경
+  Object.keys(entries).forEach(k=>{if(entries[k].status===id)entries[k].status='none';});
+  STATUSES=STATUSES.filter(s=>s.id!==id);
+  STATUS_MAP=buildStatusMap();STATUS_KO=buildStatusKO();
+  autoSave();fillStatusSels();renderTypes();renderDashboard();
+  showToast(`🗑️ '${st.label}' 상태 삭제됨`);
 }
 function addPart(){
   const v=document.getElementById('new-part-name').value.trim();
@@ -2000,7 +2102,7 @@ const GAS_URL='https://script.google.com/macros/s/AKfycbzvZtuCy-SeUDiSoHrVu1TsAl
 function buildSaveData(){
   return {
     entries, products, deadlines, updateLog,
-    hugagongSubs, customTypes, parts: PARTS,
+    hugagongSubs, customTypes, parts: PARTS, statuses: STATUSES,
     savedAt: new Date().toISOString()
   };
 }
@@ -2012,6 +2114,7 @@ function applyLoadData(data){
   hugagongSubs = data.hugagongSubs || [...HUGAGONG_SUBS_DEFAULT];
   customTypes  = data.customTypes  || [];
   if(data.parts && data.parts.length > 0){ PARTS = data.parts; PART_COLORS = PARTS.map((_,i)=>getPartColor(i)); }
+  if(data.statuses && data.statuses.length > 0){ STATUSES = data.statuses; STATUS_MAP = buildStatusMap(); STATUS_KO = buildStatusKO(); }
   PARTS.forEach(p=>{ if(!products[p]) products[p]=[]; });
   workTypes = buildWorkTypes().concat(customTypes);
 }
