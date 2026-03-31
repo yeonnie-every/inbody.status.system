@@ -59,7 +59,18 @@
   function _entries(){return typeof entries!=='undefined'?entries:{};}
   function _dday(ds){return Math.ceil((new Date(ds)-new Date().setHours(0,0,0,0))/864e5);}
   function _partColor(i){var c=['#7c2d3e','#9e3a50','#c4883a','#b8648a','#2563eb','#059669','#d97706','#7c3aed','#dc2626','#8b5a7a'];return c[i%c.length];}
-  function _extractCountry(product){var m=product.match(/\((.+?)\)$/);return m?m[1]:null;}
+  function _extractCountry(product){
+    var m=product.match(/\(([^()]+)\)$/);
+    if(!m)return null;
+    var c=m[1].trim();
+    // 유효한 국가/언어만 허용 (COUNTRY_GEO에 있거나 알려진 국가명)
+    if(COUNTRY_GEO[c])return c;
+    // 추가 허용 리스트 (좌표가 없어도 국가로 인정)
+    var known=['한국','일본','미국','중국','유럽','글로벌','독일','프랑스','영국','캐나다','호주','인도','브라질','멕시코','러시아','태국','베트남','인도네시아','말레이시아','싱가포르','대만','홍콩','사우디','UAE','터키','이탈리아','스페인','네덜란드','폴란드','스웨덴','스위스','뉴질랜드','남아프리카','아르헨티나','필리핀','이집트','영어','일본어','중국어','한국어','불어','독일어','스페인어','포르투갈어','이탈리아어','러시아어','아랍어','태국어','베트남어','인도네시아어'];
+    if(known.indexOf(c)>=0)return c;
+    // 괄호 안 내용이 국가/언어가 아니면 무시 (예: 국문향, 미국향 등)
+    return null;
+  }
 
   // 국가별 좌표 (경도,위도)
   var COUNTRY_GEO={
