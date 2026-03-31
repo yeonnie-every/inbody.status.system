@@ -341,14 +341,9 @@
       return;
     }
 
-    function _getRole() {
-      var m = document.getElementById('badge-master');
-      if (m && m.style.display !== 'none') return 'master';
-      var mg = document.getElementById('badge-manager');
-      if (mg && mg.style.display !== 'none') return 'manager';
-      return 'user';
-    }
-    const isMgr = (_getRole() === 'manager' || _getRole() === 'master');
+    // 유저 아바타 텍스트로 현재 권한 판단 (★=master, M=manager, U=user)
+    var _uaText = (document.getElementById('ua') || {}).textContent || '';
+    var isMgr = (_uaText === '★' || _uaText === 'M');
 
     el.innerHTML = qaList.map(function (q) {
       const date = new Date(q.createdAt);
