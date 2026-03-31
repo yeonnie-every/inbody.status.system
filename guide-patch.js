@@ -114,54 +114,10 @@
       <!-- 02. 권한 별 사용방법 -->
       <div id="guide-roles" style="margin-top:32px">
         <div class="guide-section-title"><span class="guide-section-num">02</span>권한 별 사용방법</div>
-
         <div class="guide-card" style="margin-bottom:16px">
           <p style="font-size:12px;color:var(--text2);line-height:1.8">IBS는 <b>3단계 권한 체계</b>로 운영됩니다. 역할에 따라 접근 가능한 기능과 데이터 범위가 다릅니다.</p>
         </div>
-
-        <div class="guide-role-card role-user">
-          <div class="role-title">
-            <span class="role-icon">👤</span>
-            USER
-            <span class="role-badge-sm" style="background:#f3f4f6;color:#6b7280">조회 전용</span>
-          </div>
-          <ul>
-            <li>조회 전용 권한 — 비밀번호 없이 접속 가능</li>
-            <li>대시보드, 전체 현황, 검색 기능 등을 통해 데이터 확인 가능</li>
-            <li>데이터 수정 및 업로드 불가</li>
-          </ul>
-          <p style="margin-top:8px;font-size:11px;color:#9ca3af">접근 가능: 대시보드 · 로드맵 · 프로젝트 현황 · 검색 · 이용 가이드</p>
-        </div>
-
-        <div class="guide-role-card role-manager">
-          <div class="role-title">
-            <span class="role-icon">🔧</span>
-            MANAGER
-            <span class="role-badge-sm" style="background:#dbeafe;color:#1d4ed8">🔒 비밀번호 필요</span>
-          </div>
-          <ul>
-            <li>데이터 관리 권한 (비밀번호 필요)</li>
-            <li>항목 생성 및 수정</li>
-            <li>제품별 데이터 업로드 및 업데이트 가능</li>
-            <li>담당 파트 기준 현황 관리</li>
-          </ul>
-          <p style="margin-top:8px;font-size:11px;color:#9ca3af">추가 접근: 항목 관리 · 데이터 업로드</p>
-        </div>
-
-        <div class="guide-role-card role-master">
-          <div class="role-title">
-            <span class="role-icon">⭐</span>
-            MASTER
-            <span class="role-badge-sm" style="background:#fdf2f4;color:#7c2d3e">🔒 비밀번호 필요</span>
-          </div>
-          <ul>
-            <li>전체 관리자 권한 (비밀번호 필요)</li>
-            <li>사이트 내 모든 기능 접근 가능</li>
-            <li>기한 관리, 유형/파트 설정 등 시스템 전반 관리</li>
-            <li>전체 데이터 통합 관리 및 운영</li>
-          </ul>
-          <p style="margin-top:8px;font-size:11px;color:#9ca3af">추가 접근: 기한 관리 · 유형/파트 관리 · 파트 공개설정</p>
-        </div>
+        <div id="guide-roles-cards"></div>
       </div>
 
       <!-- 03. 기타 -->
@@ -402,6 +358,170 @@
     }
     _goPageFinal(id, el);
   };
+
+  // ── 8. 권한 별 사용방법 — 동적 렌더링 + 인라인 편집 ──
+  var GUIDE_ROLES_KEY = 'ibs_guide_roles_v1';
+
+  var DEFAULT_ROLE_DATA = [
+    {
+      id: 'user',
+      icon: '👤',
+      name: 'USER',
+      badgeText: '조회 전용',
+      badgeBg: '#f3f4f6',
+      badgeColor: '#6b7280',
+      cardClass: 'role-user',
+      items: [
+        '조회 전용 권한 — 비밀번호 없이 접속 가능',
+        '대시보드, 전체 현황, 검색 기능 등을 통해 데이터 확인 가능',
+        '데이터 수정 및 업로드 불가'
+      ],
+      access: '접근 가능: 대시보드 · 로드맵 · 프로젝트 현황 · 검색 · 이용 가이드'
+    },
+    {
+      id: 'manager',
+      icon: '🔧',
+      name: 'MANAGER',
+      badgeText: '🔒 비밀번호 필요',
+      badgeBg: '#dbeafe',
+      badgeColor: '#1d4ed8',
+      cardClass: 'role-manager',
+      items: [
+        '데이터 관리 권한 (비밀번호 필요)',
+        '항목 생성 및 수정',
+        '제품별 데이터 업로드 및 업데이트 가능',
+        '담당 파트 기준 현황 관리'
+      ],
+      access: '추가 접근: 항목 관리 · 데이터 업로드'
+    },
+    {
+      id: 'master',
+      icon: '⭐',
+      name: 'MASTER',
+      badgeText: '🔒 비밀번호 필요',
+      badgeBg: '#fdf2f4',
+      badgeColor: '#7c2d3e',
+      cardClass: 'role-master',
+      items: [
+        '전체 관리자 권한 (비밀번호 필요)',
+        '사이트 내 모든 기능 접근 가능',
+        '기한 관리, 유형/파트 설정 등 시스템 전반 관리',
+        '전체 데이터 통합 관리 및 운영'
+      ],
+      access: '추가 접근: 기한 관리 · 유형/파트 관리 · 파트 공개설정'
+    }
+  ];
+
+  function loadRoleData() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(GUIDE_ROLES_KEY));
+      if (saved && saved.length) return saved;
+    } catch (e) {}
+    return DEFAULT_ROLE_DATA.map(function (r) { return JSON.parse(JSON.stringify(r)); });
+  }
+
+  function saveRoleData(data) {
+    try { localStorage.setItem(GUIDE_ROLES_KEY, JSON.stringify(data)); } catch (e) {}
+  }
+
+  function _isMaster() {
+    var ua = (document.getElementById('ua') || {}).textContent || '';
+    return ua === '★';
+  }
+
+  window.renderRoleCards = function () {
+    var el = document.getElementById('guide-roles-cards');
+    if (!el) return;
+    var roles = loadRoleData();
+    var master = _isMaster();
+
+    el.innerHTML = roles.map(function (r) {
+      var h = '<div class="guide-role-card ' + r.cardClass + '" id="role-card-' + r.id + '">' +
+        '<div class="role-title" style="justify-content:space-between">' +
+        '<div style="display:flex;align-items:center;gap:8px">' +
+        '<span class="role-icon">' + r.icon + '</span> ' + r.name + ' ' +
+        '<span class="role-badge-sm" style="background:' + r.badgeBg + ';color:' + r.badgeColor + '">' + r.badgeText + '</span>' +
+        '</div>';
+
+      if (master) {
+        h += '<button class="btn-sm btn-edit" onclick="editRoleCard(\'' + r.id + '\')" style="font-size:11px">✏️ 수정</button>';
+      }
+      h += '</div>';
+
+      // 편집 모드 영역 (숨김)
+      h += '<div id="role-edit-' + r.id + '" style="display:none">' +
+        '<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">항목 (줄바꿈으로 구분)</div>' +
+        '<textarea id="role-items-' + r.id + '" style="width:100%;min-height:80px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;outline:none;resize:vertical">' +
+        r.items.join('\n') + '</textarea>' +
+        '<div style="font-size:11px;font-weight:700;color:var(--text2);margin:8px 0 4px">접근 범위</div>' +
+        '<input type="text" id="role-access-' + r.id + '" value="' + r.access.replace(/"/g, '&quot;') + '" style="width:100%;padding:7px 12px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;outline:none">' +
+        '<div style="display:flex;gap:8px;margin-top:10px">' +
+        '<button class="btn btn-primary" onclick="saveRoleCard(\'' + r.id + '\')" style="padding:6px 14px;font-size:12px">💾 저장</button>' +
+        '<button class="btn btn-secondary" onclick="cancelRoleEdit(\'' + r.id + '\')" style="padding:6px 14px;font-size:12px">취소</button>' +
+        '<button class="btn btn-sm" onclick="resetRoleCard(\'' + r.id + '\')" style="padding:6px 14px;font-size:11px;background:#fee2e2;color:#991b1b">초기화</button>' +
+        '</div></div>';
+
+      // 보기 모드
+      h += '<div id="role-view-' + r.id + '">' +
+        '<ul>' + r.items.map(function (item) { return '<li>' + item + '</li>'; }).join('') + '</ul>' +
+        '<p style="margin-top:8px;font-size:11px;color:#9ca3af">' + r.access + '</p>' +
+        '</div>';
+
+      h += '</div>';
+      return h;
+    }).join('');
+  };
+
+  window.editRoleCard = function (id) {
+    document.getElementById('role-view-' + id).style.display = 'none';
+    document.getElementById('role-edit-' + id).style.display = 'block';
+  };
+
+  window.cancelRoleEdit = function (id) {
+    document.getElementById('role-view-' + id).style.display = 'block';
+    document.getElementById('role-edit-' + id).style.display = 'none';
+    renderRoleCards(); // reset textarea values
+  };
+
+  window.saveRoleCard = function (id) {
+    var items = document.getElementById('role-items-' + id).value.split('\n').filter(function (s) { return s.trim(); });
+    var access = document.getElementById('role-access-' + id).value.trim();
+    if (!items.length) { showToast('항목을 1개 이상 입력해주세요'); return; }
+
+    var roles = loadRoleData();
+    var target = roles.find(function (r) { return r.id === id; });
+    if (target) {
+      target.items = items;
+      target.access = access;
+      saveRoleData(roles);
+      renderRoleCards();
+      showToast('✅ ' + target.name + ' 권한 설명이 수정되었습니다');
+    }
+  };
+
+  window.resetRoleCard = function (id) {
+    if (!confirm('이 권한의 설명을 기본값으로 초기화하시겠습니까?')) return;
+    var roles = loadRoleData();
+    var def = DEFAULT_ROLE_DATA.find(function (r) { return r.id === id; });
+    var target = roles.find(function (r) { return r.id === id; });
+    if (def && target) {
+      target.items = def.items.slice();
+      target.access = def.access;
+      saveRoleData(roles);
+      renderRoleCards();
+      showToast('🔄 기본값으로 초기화되었습니다');
+    }
+  };
+
+  // 가이드 페이지 진입 시 role cards도 렌더링
+  var _goPageForRoles = window.goPage;
+  window.goPage = function (id, el) {
+    _goPageForRoles(id, el);
+    if (id === 'guide') renderRoleCards();
+  };
+
+  // 초기 렌더
+  renderRoleCards();
 
   console.log('✅ IBS Guide patch loaded');
 })();
