@@ -370,12 +370,11 @@
     }).join('');
   };
 
-  // ── 7. 로그인 없이도 가이드 접근 허용 ──
-  // goPage의 권한 체크에서 guide를 허용
+  // ── 7. 로그인 없이도 가이드 접근 허용 + 권한별 Q&A 버튼 표시 ──
   const _goPageFinal = window.goPage;
   window.goPage = function (id, el) {
-    if (id === 'guide' && !window.role) {
-      // 로그인 안 해도 가이드 페이지 접근 허용
+    if (id === 'guide') {
+      // guide 페이지는 로그인 여부와 관계없이 항상 접근 허용
       document.querySelectorAll('.page').forEach(function (p) { p.classList.remove('active'); });
       document.querySelectorAll('.nav-item').forEach(function (n) {
         n.classList.remove('active');
@@ -394,6 +393,8 @@
         activeEl.querySelectorAll('span').forEach(function (s) { s.style.color = '#fff'; s.style.fontWeight = '700'; });
       }
       document.getElementById('topbar-title').textContent = 'IBS 이용 가이드';
+      var ph = document.querySelector('#page-guide .ph');
+      if (ph) { var h1 = ph.querySelector('h1'); var p = ph.querySelector('p'); if(h1) h1.textContent='IBS Guide'; if(p) p.textContent='IBS 이용 가이드'; }
       renderQAList();
       return;
     }
