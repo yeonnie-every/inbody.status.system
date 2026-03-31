@@ -341,7 +341,14 @@
       return;
     }
 
-    const isMgr = (window.role === 'manager' || window.role === 'master');
+    function _getRole() {
+      var m = document.getElementById('badge-master');
+      if (m && m.style.display !== 'none') return 'master';
+      var mg = document.getElementById('badge-manager');
+      if (mg && mg.style.display !== 'none') return 'manager';
+      return 'user';
+    }
+    const isMgr = (_getRole() === 'manager' || _getRole() === 'master');
 
     el.innerHTML = qaList.map(function (q) {
       const date = new Date(q.createdAt);
