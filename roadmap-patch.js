@@ -1,5 +1,5 @@
 /*  ============================================================
- *  IBS – 로드맵 v6 (업로드된 SVG 세계지도 배경 + 깔끔한 버블)
+ *  IBS – 로드맵 v7 (대륙별 색상 + 균일 버블 크기 + 깔끔 디자인)
  *  - world-map.svg 파일을 같은 폴더에 배치해야 합니다
  *  ============================================================ */
 (function(){
@@ -13,12 +13,12 @@ css.textContent=`
 .rm-card-head{padding:14px 20px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;justify-content:space-between}
 .rm-card-body{padding:16px 20px}
 .rm-map-outer{position:relative;background:linear-gradient(145deg,#0c1929 0%,#132b42 50%,#0e1f33 100%);border-radius:10px;overflow:hidden}
-.rm-map-bg{display:block;width:100%;height:auto;opacity:0.55;filter:brightness(1.1) saturate(1.2)}
+.rm-map-bg{display:block;width:100%;height:auto;opacity:0.5;filter:brightness(1.05) saturate(1.1)}
 .rm-map-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
 .rm-map-overlay svg{width:100%;height:100%;pointer-events:all}
 .rm-map-tooltip{position:fixed;background:rgba(10,18,30,.96);color:#fff;padding:14px 20px;border-radius:12px;font-size:12px;pointer-events:none;z-index:999;display:none;box-shadow:0 8px 32px rgba(0,0,0,.5);line-height:1.9;backdrop-filter:blur(8px);border:1px solid rgba(100,180,255,.15);max-width:220px}
-.map-legend{display:flex;gap:16px;padding:10px 16px;flex-wrap:wrap;align-items:center;background:rgba(0,0,0,.2);border-top:1px solid rgba(255,255,255,.05)}
-.map-legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:rgba(255,255,255,.6);font-weight:500}
+.map-legend{display:flex;gap:14px;padding:10px 16px;flex-wrap:wrap;align-items:center;background:rgba(0,0,0,.2);border-top:1px solid rgba(255,255,255,.05)}
+.map-legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:rgba(255,255,255,.6);font-weight:600}
 .map-legend-dot{width:8px;height:8px;border-radius:50%}
 .country-rank-item{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)}
 .country-rank-item:last-child{border-bottom:none}
@@ -58,7 +58,42 @@ function _pc(i){var c=['#7c2d3e','#9e3a50','#c4883a','#b8648a','#2563eb','#05966
 var VALID_COUNTRIES=['한국','일본','미국','중국','유럽','글로벌','독일','프랑스','영국','캐나다','호주','인도','브라질','멕시코','러시아','태국','베트남','인도네시아','말레이시아','싱가포르','대만','홍콩','사우디','UAE','터키','이탈리아','스페인','네덜란드','폴란드','스웨덴','스위스','뉴질랜드','남아프리카','아르헨티나','필리핀','이집트','영어','일본어','중국어','한국어','불어','독일어','스페인어','포르투갈어','이탈리아어','러시아어','아랍어','태국어','베트남어','인도네시아어','영어(미국)','중국어(간체)','중국어(번체)','중국어/대만이(번체)'];
 function _exC(p){var m=p.match(/\(([^()]+)\)$/);if(!m)return null;var c=m[1].trim();return VALID_COUNTRIES.indexOf(c)>=0?c:null;}
 
-// 국가별 좌표: x%, y% (SVG viewBox "0 0 1052.4 580" 기준 백분율)
+// ── 대륙별 색상 (6대륙) ──
+var CONTINENT_COLORS={
+  '아시아':'#f59e0b',    // 앰버/골드
+  '유럽':'#3b82f6',      // 블루
+  '북미':'#10b981',      // 에메랄드
+  '남미':'#8b5cf6',      // 퍼플
+  '아프리카':'#ef4444',  // 레드
+  '오세아니아':'#06b6d4' // 시안
+};
+
+// 국가 → 대륙 매핑
+var COUNTRY_CONTINENT={
+  '한국':'아시아','일본':'아시아','중국':'아시아','대만':'아시아','홍콩':'아시아',
+  '인도':'아시아','태국':'아시아','베트남':'아시아','인도네시아':'아시아',
+  '말레이시아':'아시아','싱가포르':'아시아','필리핀':'아시아',
+  '사우디':'아시아','UAE':'아시아','터키':'아시아',
+  '한국어':'아시아','일본어':'아시아','중국어':'아시아','중국어(간체)':'아시아',
+  '중국어(번체)':'아시아','중국어/대만이(번체)':'아시아',
+  '태국어':'아시아','베트남어':'아시아','인도네시아어':'아시아','아랍어':'아시아',
+  '유럽':'유럽','독일':'유럽','프랑스':'유럽','영국':'유럽',
+  '이탈리아':'유럽','스페인':'유럽','네덜란드':'유럽','폴란드':'유럽',
+  '스웨덴':'유럽','스위스':'유럽','러시아':'유럽',
+  '독일어':'유럽','불어':'유럽','스페인어':'유럽','포르투갈어':'유럽',
+  '이탈리아어':'유럽','러시아어':'유럽',
+  '미국':'북미','캐나다':'북미','멕시코':'북미',
+  '영어':'북미','영어(미국)':'북미',
+  '브라질':'남미','아르헨티나':'남미',
+  '이집트':'아프리카','남아프리카':'아프리카',
+  '호주':'오세아니아','뉴질랜드':'오세아니아',
+  '글로벌':'유럽'
+};
+
+function getContinent(c){return COUNTRY_CONTINENT[c]||'아시아';}
+function getContinentColor(c){return CONTINENT_COLORS[getContinent(c)]||'#6b7280';}
+
+// 국가별 좌표: x%, y%
 var GEO={
   '한국':[78.5,36],'일본':[83,35],'미국':[17,38],'중국':[70,37],
   '유럽':[51,30],'글로벌':[50,50],'독일':[51,30],'프랑스':[48,34],
@@ -86,7 +121,7 @@ if(rp){rp.innerHTML=`
 <div class="ph"><h1>Roadmap</h1><p>로드맵</p></div>
 <div class="rm-grid-2-1">
   <div class="rm-card">
-    <div class="rm-card-head">🌏 국가별 진행 현황<select id="rm-map-status" onchange="renderRoadmap()" style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;font-size:11px;font-family:inherit;margin-left:8px"><option value="">전체</option><option value="done">완료</option><option value="inprog">진행중</option><option value="none">미착수</option></select></div>
+    <div class="rm-card-head">🌏 국가별 진행 현황<select id="rm-map-filter" onchange="renderRoadmap()" style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;font-size:11px;font-family:inherit;margin-left:8px"><option value="">전체</option><option value="아시아">아시아</option><option value="유럽">유럽</option><option value="북미">북미</option><option value="남미">남미</option><option value="아프리카">아프리카</option><option value="오세아니아">오세아니아</option></select></div>
     <div class="rm-card-body" style="padding:0">
       <div class="rm-map-outer" id="rm-map-outer">
         <img class="rm-map-bg" id="rm-map-bg" src="world-map.svg" alt="World Map" onerror="this.style.display='none';document.getElementById('rm-map-outer').style.minHeight='320px'">
@@ -125,35 +160,37 @@ if(rp){rp.innerHTML=`
 var rmBarInst=null;
 window.renderRoadmap=function(){renderWorldMap();renderCountryRank();renderPartBar();renderMilestones();renderGantt();fillGanttSel();};
 
+// ── 균일 버블 크기 ──
+var BUBBLE_R=1.8;
+
 // ── World Map ──
 function renderWorldMap(){
   var overlay=document.getElementById('rm-map-overlay');if(!overlay)return;
-  var all=_allE(),sf=(document.getElementById('rm-map-status')||{}).value||'';
+  var all=_allE(),filterContinent=(document.getElementById('rm-map-filter')||{}).value||'';
   var cs={};
   all.forEach(function(e){var c=_exC(e.product);if(!c)return;if(!cs[c])cs[c]={t:0,d:0,i:0,n:0};cs[c].t++;if(e.status==='done')cs[c].d++;else if(e.status==='inprog')cs[c].i++;else cs[c].n++;});
 
-  var keys=Object.keys(cs).filter(function(c){return GEO[c];});
-  var maxT=Math.max.apply(null,keys.map(function(c){return cs[c].t;}).concat([1]));
+  var keys=Object.keys(cs).filter(function(c){
+    if(!GEO[c])return false;
+    if(filterContinent&&getContinent(c)!==filterContinent)return false;
+    return true;
+  });
 
   var bubbles=[];
   keys.forEach(function(country){
     var g=GEO[country];if(!g)return;
     var s=cs[country],pct=s.t?Math.round(s.d/s.t*100):0;
-    var val=sf?(s[sf==='done'?'d':sf==='inprog'?'i':'n']||0):s.t;
-    if(sf&&val===0)return;
-    var r=Math.max(1.2,Math.min(4.5,(val/maxT)*3.8+0.8));
-    var color=pct>=80?'#10b981':pct>=40?'#3b82f6':pct>0?'#f59e0b':'#6b7280';
-    if(sf==='done')color='#10b981';else if(sf==='inprog')color='#3b82f6';else if(sf==='none')color='#f59e0b';
-    bubbles.push({country:country,x:g[0],y:g[1],r:r,color:color,val:val,pct:pct,s:s});
+    var color=getContinentColor(country);
+    bubbles.push({country:country,x:g[0],y:g[1],r:BUBBLE_R,color:color,val:s.t,pct:pct,s:s,continent:getContinent(country)});
   });
 
   // Collision avoidance
-  for(var iter=0;iter<15;iter++){
+  for(var iter=0;iter<20;iter++){
     for(var a=0;a<bubbles.length;a++){
       for(var b=a+1;b<bubbles.length;b++){
         var dx=bubbles[b].x-bubbles[a].x,dy=bubbles[b].y-bubbles[a].y;
         var dist=Math.sqrt(dx*dx+dy*dy);
-        var minDist=(bubbles[a].r+bubbles[b].r)*1.4+1.8;
+        var minDist=BUBBLE_R*2+2.5;
         if(dist<minDist&&dist>0){
           var push=(minDist-dist)/2*0.3;
           var nx=dx/dist,ny=dy/dist;
@@ -170,32 +207,41 @@ function renderWorldMap(){
 
   var svg='<svg viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">';
 
-  bubbles.sort(function(a,b){return b.r-a.r;});
   bubbles.forEach(function(b){
-    svg+='<circle cx="'+b.x+'" cy="'+b.y+'" r="'+(b.r+1)+'" fill="'+b.color+'" opacity="0.1"/>';
-    svg+='<circle cx="'+b.x+'" cy="'+b.y+'" r="'+(b.r+0.4)+'" fill="'+b.color+'" opacity="0.2"/>';
-    svg+='<circle cx="'+b.x+'" cy="'+b.y+'" r="'+b.r+'" fill="'+b.color+'" opacity="0.88" stroke="rgba(255,255,255,0.5)" stroke-width="0.12" style="cursor:pointer" '+
-      'onmouseenter="showMapTip(evt,\''+b.country.replace(/'/g,"\\\'")+'\','+b.s.d+','+b.s.t+','+b.pct+','+b.s.i+','+b.s.n+')" onmouseleave="hideMapTip()"/>';
-    // Count inside bubble
-    if(b.r>=2){
-      svg+='<text x="'+b.x+'" y="'+(b.y+0.4)+'" text-anchor="middle" dominant-baseline="central" font-size="'+(b.r*0.55)+'" font-weight="800" fill="#fff" style="pointer-events:none" font-family="Noto Sans KR,sans-serif">'+b.val+'</text>';
-    }
-    // Label below bubble
-    var fs=Math.max(0.9,Math.min(1.5,b.r*0.42));
-    svg+='<text x="'+b.x+'" y="'+(b.y+b.r+fs+0.4)+'" text-anchor="middle" font-size="'+fs+'" font-weight="700" fill="rgba(255,255,255,0.85)" style="pointer-events:none;paint-order:stroke;stroke:rgba(0,0,0,0.8);stroke-width:0.3px;stroke-linejoin:round" font-family="Noto Sans KR,sans-serif">'+b.country+'</text>';
+    // Soft glow
+    svg+='<circle cx="'+b.x+'" cy="'+b.y+'" r="'+(b.r+0.8)+'" fill="'+b.color+'" opacity="0.15"/>';
+    // Main circle
+    svg+='<circle cx="'+b.x+'" cy="'+b.y+'" r="'+b.r+'" fill="'+b.color+'" opacity="0.9" stroke="rgba(255,255,255,0.45)" stroke-width="0.1" style="cursor:pointer" '+
+      'onmouseenter="showMapTip(evt,\''+b.country.replace(/'/g,"\\\'")+'\','+b.s.d+','+b.s.t+','+b.pct+','+b.s.i+','+b.s.n+',\''+b.continent+'\')" onmouseleave="hideMapTip()"/>';
+    // Label below
+    svg+='<text x="'+b.x+'" y="'+(b.y+b.r+1.4)+'" text-anchor="middle" font-size="1.1" font-weight="700" fill="rgba(255,255,255,0.85)" style="pointer-events:none;paint-order:stroke;stroke:rgba(0,0,0,0.7);stroke-width:0.3px;stroke-linejoin:round" font-family="Noto Sans KR,sans-serif">'+b.country+'</text>';
   });
 
   svg+='</svg>';
   overlay.innerHTML=svg;
 
+  // Legend (대륙별)
   var lg=document.getElementById('rm-map-legend');
-  if(lg)lg.innerHTML='<div class="map-legend-item"><div class="map-legend-dot" style="background:#10b981"></div>80%+</div><div class="map-legend-item"><div class="map-legend-dot" style="background:#3b82f6"></div>40~79%</div><div class="map-legend-item"><div class="map-legend-dot" style="background:#f59e0b"></div>1~39%</div><div class="map-legend-item"><div class="map-legend-dot" style="background:#6b7280"></div>0%</div><div class="map-legend-item" style="margin-left:auto;font-weight:600;color:rgba(255,255,255,.7)">'+keys.length+'개 국가/언어</div>';
+  if(lg){
+    var legendHtml='';
+    var continentNames=['아시아','유럽','북미','남미','아프리카','오세아니아'];
+    continentNames.forEach(function(cn){
+      legendHtml+='<div class="map-legend-item"><div class="map-legend-dot" style="background:'+CONTINENT_COLORS[cn]+'"></div>'+cn+'</div>';
+    });
+    legendHtml+='<div class="map-legend-item" style="margin-left:auto;color:rgba(255,255,255,.7)">'+keys.length+'개 국가/언어</div>';
+    lg.innerHTML=legendHtml;
+  }
 }
 
-window.showMapTip=function(evt,c,d,t,p,i,n){var tip=document.getElementById('rm-tooltip');if(!tip)return;tip.innerHTML='<div style="font-weight:800;font-size:14px;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:6px">'+c+'</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px"><div>완료</div><div style="font-weight:800;color:#10b981">'+d+'/'+t+' ('+p+'%)</div><div>진행중</div><div style="font-weight:700;color:#3b82f6">'+i+'</div><div>미착수</div><div style="font-weight:700;color:#f59e0b">'+n+'</div></div>';tip.style.display='block';tip.style.left=(evt.clientX+16)+'px';tip.style.top=(evt.clientY-14)+'px';};
+window.showMapTip=function(evt,c,d,t,p,i,n,cont){
+  var tip=document.getElementById('rm-tooltip');if(!tip)return;
+  var cc=CONTINENT_COLORS[cont]||'#6b7280';
+  tip.innerHTML='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:8px"><div style="width:10px;height:10px;border-radius:50%;background:'+cc+';flex-shrink:0"></div><div style="font-weight:800;font-size:14px">'+c+'</div><div style="font-size:10px;color:rgba(255,255,255,.5)">'+cont+'</div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px"><div>전체</div><div style="font-weight:800">'+t+'건</div><div>완료</div><div style="font-weight:700;color:#10b981">'+d+' ('+p+'%)</div><div>진행중</div><div style="font-weight:700;color:#3b82f6">'+i+'</div><div>미착수</div><div style="font-weight:700;color:#f59e0b">'+n+'</div></div>';
+  tip.style.display='block';tip.style.left=(evt.clientX+16)+'px';tip.style.top=(evt.clientY-14)+'px';
+};
 window.hideMapTip=function(){var t=document.getElementById('rm-tooltip');if(t)t.style.display='none';};
 
-function renderCountryRank(){var el=document.getElementById('rm-country-rank');if(!el)return;var all=_allE(),st={};all.forEach(function(e){var c=_exC(e.product);if(!c)return;if(!st[c])st[c]={t:0,d:0};st[c].t++;if(e.status==='done')st[c].d++;});var sorted=Object.keys(st).map(function(c){var s=st[c];return{c:c,t:s.t,d:s.d,p:Math.round(s.d/s.t*100)};}).sort(function(a,b){return b.p-a.p||b.t-a.t;});if(!sorted.length){el.innerHTML='<div class="empty" style="padding:20px">국가별 데이터가 없습니다.</div>';return;}el.innerHTML=sorted.map(function(s,i){var color=s.p>=80?'#10b981':s.p>=40?'#3b82f6':s.p>0?'#f59e0b':'#6b7280';return'<div class="country-rank-item"><span class="cr-num">'+(i+1)+'</span><span class="cr-name">'+s.c+'</span><div class="cr-bar-wrap"><div class="cr-bar" style="width:'+s.p+'%;background:'+color+'"></div></div><span class="cr-pct" style="color:'+color+'">'+s.p+'%</span><span style="font-size:10px;color:var(--text2);width:38px;text-align:right">'+s.d+'/'+s.t+'</span></div>';}).join('');}
+function renderCountryRank(){var el=document.getElementById('rm-country-rank');if(!el)return;var all=_allE(),st={};all.forEach(function(e){var c=_exC(e.product);if(!c)return;if(!st[c])st[c]={t:0,d:0};st[c].t++;if(e.status==='done')st[c].d++;});var sorted=Object.keys(st).map(function(c){var s=st[c];return{c:c,t:s.t,d:s.d,p:Math.round(s.d/s.t*100)};}).sort(function(a,b){return b.p-a.p||b.t-a.t;});if(!sorted.length){el.innerHTML='<div class="empty" style="padding:20px">국가별 데이터가 없습니다.</div>';return;}el.innerHTML=sorted.map(function(s,i){var color=getContinentColor(s.c);return'<div class="country-rank-item"><span class="cr-num">'+(i+1)+'</span><span class="cr-name"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:'+color+';margin-right:6px;vertical-align:middle"></span>'+s.c+'</span><div class="cr-bar-wrap"><div class="cr-bar" style="width:'+s.p+'%;background:'+color+'"></div></div><span class="cr-pct" style="color:'+color+'">'+s.p+'%</span><span style="font-size:10px;color:var(--text2);width:38px;text-align:right">'+s.d+'/'+s.t+'</span></div>';}).join('');}
 
 function renderPartBar(){var cv=document.getElementById('rm-part-bar');if(!cv)return;var ctx=cv.getContext('2d');if(rmBarInst)rmBarInst.destroy();var vP=_vP(),all=_allE();var lb=vP.filter(function(p){return all.some(function(e){return e.part===p;});});var d1=lb.map(function(p){return all.filter(function(e){return e.part===p&&e.status==='done'}).length;});var d2=lb.map(function(p){return all.filter(function(e){return e.part===p&&e.status==='inprog'}).length;});var d3=lb.map(function(p){return all.filter(function(e){return e.part===p&&(e.status==='none'||e.status==='na')}).length;});rmBarInst=new Chart(ctx,{type:'bar',data:{labels:lb,datasets:[{label:'완료',data:d1,backgroundColor:'#10b981',borderRadius:4},{label:'진행중',data:d2,backgroundColor:'#3b82f6',borderRadius:4},{label:'미착수',data:d3,backgroundColor:'#e5e7eb',borderRadius:4}]},options:{responsive:true,plugins:{legend:{position:'top',labels:{font:{size:11},usePointStyle:true,pointStyle:'rectRounded'}}},scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,ticks:{stepSize:1},grid:{color:'#f0f0f0'}}}}});}
 
@@ -214,5 +260,5 @@ if(bgImg){
   bgImg.onerror=function(){this.style.display='none';document.getElementById('rm-map-outer').style.minHeight='320px';renderWorldMap();};
 }
 
-console.log('✅ IBS Roadmap v6 loaded');
+console.log('✅ IBS Roadmap v7 loaded');
 })();
