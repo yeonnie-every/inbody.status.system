@@ -12,8 +12,8 @@ css.textContent=`
 .rm-card{background:var(--white);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
 .rm-card-head{padding:14px 20px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;justify-content:space-between}
 .rm-card-body{padding:16px 20px}
-.rm-map-outer{position:relative;background:#f8fafc;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb;max-height:340px}
-.rm-map-bg{display:block;width:100%;height:auto;opacity:1;max-height:340px;object-fit:contain}
+.rm-map-outer{position:relative;background:#f8fafc;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb;max-height:480px}
+.rm-map-bg{display:block;width:100%;height:auto;opacity:1;max-height:480px;object-fit:contain}
 .rm-map-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
 .rm-map-overlay svg{width:100%;height:100%;pointer-events:all;position:absolute;top:0;left:0}
 .rm-map-tooltip{position:fixed;background:rgba(26,31,46,.96);color:#fff;padding:14px 20px;border-radius:12px;font-size:12px;pointer-events:none;z-index:999;display:none;box-shadow:0 8px 32px rgba(0,0,0,.3);line-height:1.9;backdrop-filter:blur(8px);border:1px solid rgba(100,100,100,.15);max-width:220px}
@@ -132,7 +132,7 @@ if(rp){rp.innerHTML=`
   </div>
   <div class="rm-card">
     <div class="rm-card-head">📊 국가별 진행률 순위</div>
-    <div class="rm-card-body" style="padding:10px 16px;max-height:340px;overflow-y:auto"><div id="rm-country-rank"></div></div>
+    <div class="rm-card-body" style="padding:10px 16px;max-height:480px;overflow-y:auto"><div id="rm-country-rank"></div></div>
   </div>
 </div>
 <div class="rm-grid-2">
