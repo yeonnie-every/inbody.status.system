@@ -276,10 +276,10 @@ canvas{max-height:200px}
       <div class="rb-icon">⭐</div>
       <div class="rb-info">
         <div class="rb-name">Master</div>
-        <div class="rb-desc">기한 관리, 유형/파트 관리 포함 전체 권한</div>
+        <div class="rb-desc">기한 관리, 유형/파트 관리, 공개설정 포함 전체 권한</div>
       </div>
     </button>
-    <div class="ls-version">IBS v2.2 · InBody Status System</div>
+    <div class="ls-version">IBS v2.3 · InBody Status System</div>
   </div>
 </div>
 
@@ -893,6 +893,10 @@ const PART_COLOR_POOL=['#7c2d3e','#9e3a50','#c4883a','#b8648a','#8b5a7a','#c4703
 function getPartColor(i){ return PART_COLOR_POOL[i % PART_COLOR_POOL.length]; }
 // 하위호환: PART_COLORS 참조하는 코드용
 let PART_COLORS=PARTS.map((_,i)=>getPartColor(i));
+// ★ 파트 공개/숨김 관리
+let hiddenParts=[];
+function isPartVisible(p){ return !hiddenParts.includes(p); }
+function getVisibleParts(){ return PARTS.filter(p=>isPartVisible(p)); }
 // 작업유형: 일반 유형 + 후가공(하위유형 포함)
 const BASE_TYPES=['제품UI','인증'];
 const HUGAGONG_SUBS_DEFAULT=['명판','매뉴얼','조립설명서','기타'];
@@ -933,17 +937,16 @@ const PRIO_MAP={'높음':'high','중간':'mid','낮음':'low','high':'high','mid
 
 function fmtDate(d){return d.toISOString().split('T')[0]}
 function dday(ds){return Math.ceil((new Date(ds)-new Date().setHours(0,0,0,0))/864e5)}
-function allEntries(){return Object.entries(entries).map(([k,v])=>{const[p,pr,tp]=k.split('|');return{key:k,part:p,product:pr,type:tp,...v}})}
-
+function allEntries(includeHidden){return Object.entries(entries).map(([k,v])=>{const[p,pr,tp]=k.split('|');return{key:k,part:p,product:pr,type:tp,...v}}).filter(e=>includeHidden||isPartVisible(e.part))}
 // ── NAV ──
 const PAGE_TITLES={dashboard:'대시보드',status:'프로젝트 현황',search:'검색',update:'항목 관리',upload:'데이터 업로드',deadline:'기한 관리',types:'유형/파트 관리'};
-const PAGE_ROLES={dashboard:['user','manager','master'],roadmap:['user','manager','master'],status:['user','manager','master'],search:['user','manager','master'],update:['manager','master'],upload:['manager','master'],deadline:['master'],types:['master']};
+const PAGE_ROLES={dashboard:['user','manager','master'],roadmap:['user','manager','master'],status:['user','manager','master'],search:['user','manager','master'],update:['manager','master'],upload:['manager','master'],deadline:['master'],types:['master'],guide:['user','manager','master']};
 function goPage(id,el){
   // 권한 체크
   if(role&&PAGE_ROLES[id]&&!PAGE_ROLES[id].includes(role)){
     showToast('⛔ 접근 권한이 없습니다');return;
   }
-  if(!role&&!['dashboard','status','search','roadmap'].includes(id)){
+  if(!role&&!['dashboard','status','search','roadmap','guide'].includes(id)){
     showToast('⛔ 로그인이 필요합니다');return;
   }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -963,8 +966,8 @@ function goPage(id,el){
     activeEl.style.fontWeight='700';
     activeEl.querySelectorAll('span').forEach(s=>{s.style.color='#fff';s.style.fontWeight='700'});
   }
-  const korTitles={dashboard:'대시보드',roadmap:'로드맵',status:'프로젝트 현황',search:'검색',update:'항목 관리',upload:'데이터 업로드',deadline:'기한 관리',types:'유형/파트 관리'};
-  const engTitles={dashboard:'Dashboard',roadmap:'Roadmap',status:'Project Status',search:'Search',update:'Update',upload:'Upload',deadline:'Deadline',types:'Types'};
+  const korTitles={dashboard:'대시보드',roadmap:'로드맵',status:'프로젝트 현황',search:'검색',update:'항목 관리',upload:'데이터 업로드',deadline:'기한 관리',types:'유형/파트 관리',guide:'IBS 이용 가이드'};
+  const engTitles={dashboard:'Dashboard',roadmap:'Roadmap',status:'Project Status',search:'Search',update:'Update',upload:'Upload',deadline:'Deadline',types:'Types',guide:'IBS Guide'};
   document.getElementById('topbar-title').textContent=korTitles[id]||id;
   const pageEl=document.getElementById('page-'+id);
   if(pageEl){
@@ -979,7 +982,8 @@ function goPage(id,el){
   if(id==='update'){fillSel('uf');renderUpdateTable();fillFormSels();renderProdMgr();fillStatusSels()}
   if(id==='deadline'){fillDlSels();renderDlList();renderPriorityDash()}
   if(id==='upload'){manualLog=[];renderManualLog();updateDataBanner();fillStatusSels();}
-  if(id==='types')renderTypes();
+  if(id==='types'){renderTypes();renderVisibilityList();}
+  if(id==='guide'){renderQAList();renderRoleCards();}
 }
 
 // ── AUTH ──
@@ -1106,7 +1110,8 @@ function timeAgo(iso){const d=(Date.now()-new Date(iso))/1000;if(d<60)return'방
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600)}
 function fillSel(pfx){
   const ps=document.getElementById(`${pfx}-part`),ts=document.getElementById(`${pfx}-type`);
-  if(ps)ps.innerHTML='<option value="">전체 파트</option>'+PARTS.map(p=>`<option>${p}</option>`).join('');
+  const partList=pfx==='uf'?PARTS:getVisibleParts();
+  if(ps)ps.innerHTML='<option value="">전체 파트</option>'+partList.map(p=>`<option>${p}</option>`).join('');
   if(ts)ts.innerHTML='<option value="">전체 유형</option>'+workTypes.map(t=>`<option>${t}</option>`).join('');
   if(pfx==='uf'){const pr=document.getElementById('uf-prod');if(pr)pr.innerHTML='<option value="">전체 제품</option>'+Object.values(products).flat().map(p=>`<option>${p}</option>`).join('')}
 }
@@ -1135,9 +1140,9 @@ function fillStatusSels(){
 }
 
 function renderPartTabs(){
-  const tabs=['전체',...PARTS.filter(p=>Object.values(products[p]||[]).length>0||PARTS.includes(p))];
-  // 실제 데이터 있는 파트만
-  const activeParts=['전체',...PARTS.filter(p=>(products[p]||[]).length>0)];
+  const vParts=getVisibleParts();
+  if(currentPart!=='전체'&&!vParts.includes(currentPart))currentPart='전체';
+  const activeParts=['전체',...vParts.filter(p=>(products[p]||[]).length>0)];
   const el=document.getElementById('part-tabs');
   if(!el)return;
   el.innerHTML=activeParts.map(p=>`<button class="wtype-tab${p===currentPart?' active':''}" onclick="setPart('${p}',this)">${p}</button>`).join('');
@@ -1175,20 +1180,24 @@ function renderDashboard(){
   document.getElementById('st-done-p').textContent=tot?`${Math.round(done/tot*100)}%`:'0%';
   document.getElementById('st-prog-p').textContent=tot?`${Math.round(prog/tot*100)}%`:'0%';
   document.getElementById('st-none-p').textContent=tot?`${Math.round(none/tot*100)}%`:'0%';
-  document.getElementById('part-bars').innerHTML=PARTS.map((p,i)=>{
+  document.getElementById('part-bars').innerHTML=getVisibleParts().map((p)=>{
+    const i=PARTS.indexOf(p);
     const pe=all.filter(e=>e.part===p),pct=pe.length?Math.round(pe.filter(e=>e.status==='done').length/pe.length*100):0;
-    return`<div class="part-row"><div class="part-name">${p}</div><div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${PART_COLORS[i]}"></div></div><div class="bar-pct">${pct}%</div></div>`;
+    return`<div class="part-row"><div class="part-name">${p}</div><div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${getPartColor(i)}"></div></div><div class="bar-pct">${pct}%</div></div>`;
   }).join('');
   const ctx1=document.getElementById('donutChart').getContext('2d');
   if(donutInst)donutInst.destroy();
   const donutLabels=STATUSES.map(s=>s.label);
   const donutData=STATUSES.map(s=>all.filter(e=>e.status===s.id).length);
-  const donutColors=STATUSES.map(s=>s.color);
+  // 버건디 계열 차트 색상
+  const CHART_COLORS={'done':'#7c2d3e','inprog':'#b8648a','none':'#d4a5b5','na':'#e8cdd6','planned':'#9e3a50'};
+  const donutColors=STATUSES.map(s=>CHART_COLORS[s.id]||s.color);
   donutInst=new Chart(ctx1,{type:'doughnut',data:{labels:donutLabels,datasets:[{data:donutData,backgroundColor:donutColors,borderWidth:2,borderColor:'#fff'}]},options:{plugins:{legend:{position:'right',labels:{font:{size:12},color:'#1a1f2e'}}},cutout:'65%'}});
   const ctx2=document.getElementById('barChart').getContext('2d');
   if(barInst)barInst.destroy();
-  const barDatasets=STATUSES.filter(s=>s.id!=='na').map(s=>({label:s.label,data:PARTS.map(p=>all.filter(e=>e.part===p&&e.status===s.id).length),backgroundColor:s.color}));
-  barInst=new Chart(ctx2,{type:'bar',data:{labels:PARTS,datasets:barDatasets},options:{plugins:{legend:{labels:{font:{size:12},color:'#1a1f2e'}}},scales:{x:{stacked:true},y:{stacked:true,ticks:{stepSize:1}}},responsive:true}});
+  const vParts=getVisibleParts();
+  const barDatasets=STATUSES.filter(s=>s.id!=='na').map(s=>({label:s.label,data:vParts.map(p=>all.filter(e=>e.part===p&&e.status===s.id).length),backgroundColor:CHART_COLORS[s.id]||s.color}));
+  barInst=new Chart(ctx2,{type:'bar',data:{labels:vParts,datasets:barDatasets},options:{plugins:{legend:{labels:{font:{size:12},color:'#1a1f2e'}}},scales:{x:{stacked:true},y:{stacked:true,ticks:{stepSize:1}}},responsive:true}});
   const alerts=deadlines.filter(d=>{const e=entries[`${d.part}|${d.product}|${d.type}`];return!(e&&e.status==='done')&&dday(d.date)<=3});
   // 비고 날짜 기반 알림 (진행중 항목 중 D-3 이내)
   const noteAlerts=allEntries().filter(e=>{
@@ -1299,7 +1308,7 @@ function renderMatrix(){
 
   // 국가 필터 적용
   const countries=fc?[fc]:[...countrySet];
-  const fParts=fp?[fp]:PARTS.filter(p=>[...productSet].some(b=>partOfProduct[b]===p));
+  const fParts=fp?[fp]:getVisibleParts().filter(p=>[...productSet].some(b=>partOfProduct[b]===p));
 
   document.getElementById('matrix-title').textContent=
     (fp||'전체')+(currentWtype!=='전체'?' — '+currentWtype:'');
@@ -1349,7 +1358,7 @@ function renderMatrix(){
 
 // ── PRIORITY ──
 function renderPriority(){
-  const sorted=[...deadlines].sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(0,5);
+  const sorted=[...deadlines].filter(d=>isPartVisible(d.part)).sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(0,5);
   if(!sorted.length){document.getElementById('priority-list').innerHTML='';return}
   document.getElementById('priority-list').innerHTML=`<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">⏰ 우선순위 항목</div>`+sorted.map(d=>{
     const dd=dday(d.date),e=entries[`${d.part}|${d.product}|${d.type}`],s=e?e.status:'none';
@@ -1460,10 +1469,10 @@ function clearForm(){
 }
 function renderUpdateTable(){
   const fp=document.getElementById('uf-part').value,fprod=document.getElementById('uf-prod').value;
-  let all=allEntries().filter(e=>{if(fp&&e.part!==fp)return false;if(fprod&&e.product!==fprod)return false;return true});
+  let all=allEntries(true).filter(e=>{if(fp&&e.part!==fp)return false;if(fprod&&e.product!==fprod)return false;return true});
   if(!all.length){document.getElementById('update-tbl').innerHTML='<div class="empty">항목이 없습니다.</div>';return}
   let h=`<table class="mx"><thead><tr><th>파트</th><th>제품</th><th>유형</th><th>상태</th><th>버전</th><th>담당자</th><th>수정</th><th>삭제</th></tr></thead><tbody>`;
-  all.forEach(e=>{h+=`<tr><td>${e.part}</td><td>${e.product}</td><td>${e.type}</td><td>${sbHtml(e.status)}</td><td>${e.version||'—'}</td><td>${e.owner||'—'}</td><td><button class="btn-sm btn-edit" onclick="loadEdit('${e.key}')">수정</button></td><td><button class="btn-sm btn-del" onclick="delEntry('${e.key}')">삭제</button></td></tr>`});
+  all.forEach(e=>{const isHidden=hiddenParts.includes(e.part);h+=`<tr${isHidden?' style="opacity:.5"':''}><td>${e.part}${isHidden?' <span style="font-size:10px;color:#ef4444">숨김</span>':''}</td><td>${e.product}</td><td>${e.type}</td><td>${sbHtml(e.status)}</td><td>${e.version||'—'}</td><td>${e.owner||'—'}</td><td><button class="btn-sm btn-edit" onclick="loadEdit('${e.key}')">수정</button></td><td><button class="btn-sm btn-del" onclick="delEntry('${e.key}')">삭제</button></td></tr>`});
   h+=`</tbody></table>`;document.getElementById('update-tbl').innerHTML=h;
 }
 function loadEdit(key){
@@ -1860,7 +1869,7 @@ function updateDataBanner(){
 
 function clearAllData(){
   if(!confirm('정말 모든 데이터를 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.'))return;
-  entries={};products={};updateLog=[];deadlines=[];
+  entries={};products={};updateLog=[];deadlines=[];hiddenParts=[];
   PARTS=[...DEFAULT_PARTS];PART_COLORS=PARTS.map((_,i)=>getPartColor(i));
   STATUSES=[...DEFAULT_STATUSES.map(s=>({...s}))];STATUS_MAP=buildStatusMap();STATUS_KO=buildStatusKO();
   PARTS.forEach(p=>products[p]=[]);
@@ -2103,6 +2112,7 @@ function buildSaveData(){
   return {
     entries, products, deadlines, updateLog,
     hugagongSubs, customTypes, parts: PARTS, statuses: STATUSES,
+    hiddenParts,
     savedAt: new Date().toISOString()
   };
 }
@@ -2113,6 +2123,7 @@ function applyLoadData(data){
   updateLog  = data.updateLog  || [];
   hugagongSubs = data.hugagongSubs || [...HUGAGONG_SUBS_DEFAULT];
   customTypes  = data.customTypes  || [];
+  hiddenParts  = data.hiddenParts  || [];
   if(data.parts && data.parts.length > 0){ PARTS = data.parts; PART_COLORS = PARTS.map((_,i)=>getPartColor(i)); }
   if(data.statuses && data.statuses.length > 0){ STATUSES = data.statuses; STATUS_MAP = buildStatusMap(); STATUS_KO = buildStatusKO(); }
   PARTS.forEach(p=>{ if(!products[p]) products[p]=[]; });
@@ -2227,6 +2238,12 @@ function loadFromFile(event){
   reader.readAsText(file);
   event.target.value='';
 }
+
+// ── STUB FUNCTIONS (overridden by patch files) ──
+function renderVisibilityList(){}
+function renderQAList(){}
+function renderRoleCards(){}
+function togglePartVisibility(){}
 
 // ── INIT ──
 const autoLoaded = tryAutoLoad();
