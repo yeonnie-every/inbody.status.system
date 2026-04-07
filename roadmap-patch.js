@@ -15,7 +15,7 @@ css.textContent=`
 .rm-map-outer{position:relative;background:#f8fafc;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb;max-height:340px}
 .rm-map-bg{display:block;width:100%;height:auto;opacity:1;max-height:340px;object-fit:contain}
 .rm-map-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
-.rm-map-overlay svg{width:100%;height:100%;pointer-events:all}
+.rm-map-overlay svg{width:100%;height:100%;pointer-events:all;position:absolute;top:0;left:0}
 .rm-map-tooltip{position:fixed;background:rgba(26,31,46,.96);color:#fff;padding:14px 20px;border-radius:12px;font-size:12px;pointer-events:none;z-index:999;display:none;box-shadow:0 8px 32px rgba(0,0,0,.3);line-height:1.9;backdrop-filter:blur(8px);border:1px solid rgba(100,100,100,.15);max-width:220px}
 .map-legend{display:flex;gap:14px;padding:10px 16px;flex-wrap:wrap;align-items:center;background:#f0f1f3;border-top:1px solid #e5e7eb}
 .map-legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:#6b7280;font-weight:600}
@@ -205,11 +205,11 @@ function renderWorldMap(){
     }
   }
 
-  var svg='<svg viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><defs><filter id="pin-shadow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0.15" stdDeviation="0.2" flood-color="#000" flood-opacity="0.2"/></filter></defs>';
+  var svg='<svg viewBox="0 0 100 55" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"><defs><filter id="pin-shadow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0.15" stdDeviation="0.2" flood-color="#000" flood-opacity="0.2"/></filter></defs>';
 
   bubbles.forEach(function(b){
-    // Balloon pin: round body + small pointed tail at bottom
-    var px=b.x, py=b.y;
+    // Scale y from 0-100 range to 0-55 range to match viewBox
+    var px=b.x, py=b.y*0.55;
     var s=0.55; // scale
     // Round balloon body centered above the point
     svg+='<circle cx="'+px+'" cy="'+(py-s*1.5)+'" r="'+(s*1.1)+'" fill="'+b.color+'" filter="url(#pin-shadow)" stroke="#fff" stroke-width="0.15" style="cursor:pointer" '+
