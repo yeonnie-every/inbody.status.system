@@ -160,8 +160,8 @@ if(rp){rp.innerHTML=`
 var rmBarInst=null;
 window.renderRoadmap=function(){renderWorldMap();renderCountryRank();renderPartBar();renderMilestones();renderGantt();fillGanttSel();};
 
-// ── 균일 버블 크기 ──
-var BUBBLE_R=1.8;
+// ── 작은 핀 마커 크기 ──
+var BUBBLE_R=0.7;
 
 // ── World Map ──
 function renderWorldMap(){
@@ -190,7 +190,7 @@ function renderWorldMap(){
       for(var b=a+1;b<bubbles.length;b++){
         var dx=bubbles[b].x-bubbles[a].x,dy=bubbles[b].y-bubbles[a].y;
         var dist=Math.sqrt(dx*dx+dy*dy);
-        var minDist=BUBBLE_R*2+2.5;
+        var minDist=BUBBLE_R*2+1.2;
         if(dist<minDist&&dist>0){
           var push=(minDist-dist)/2*0.3;
           var nx=dx/dist,ny=dy/dist;
@@ -208,13 +208,13 @@ function renderWorldMap(){
   var svg='<svg viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">';
 
   bubbles.forEach(function(b){
-    // Soft glow
-    svg+='<circle cx="'+b.x+'" cy="'+b.y+'" r="'+(b.r+0.8)+'" fill="'+b.color+'" opacity="0.15"/>';
-    // Main circle
-    svg+='<circle cx="'+b.x+'" cy="'+b.y+'" r="'+b.r+'" fill="'+b.color+'" opacity="0.9" stroke="rgba(255,255,255,0.45)" stroke-width="0.1" style="cursor:pointer" '+
+    // Small pin marker with subtle glow
+    svg+='<circle cx="'+b.x+'" cy="'+b.y+'" r="'+(b.r+0.3)+'" fill="'+b.color+'" opacity="0.25"/>';
+    // Main pin dot
+    svg+='<circle cx="'+b.x+'" cy="'+b.y+'" r="'+b.r+'" fill="'+b.color+'" opacity="1" stroke="rgba(255,255,255,0.7)" stroke-width="0.12" style="cursor:pointer" '+
       'onmouseenter="showMapTip(evt,\''+b.country.replace(/'/g,"\\\'")+'\','+b.s.d+','+b.s.t+','+b.pct+','+b.s.i+','+b.s.n+',\''+b.continent+'\')" onmouseleave="hideMapTip()"/>';
-    // Label below
-    svg+='<text x="'+b.x+'" y="'+(b.y+b.r+1.4)+'" text-anchor="middle" font-size="1.1" font-weight="700" fill="rgba(255,255,255,0.85)" style="pointer-events:none;paint-order:stroke;stroke:rgba(0,0,0,0.7);stroke-width:0.3px;stroke-linejoin:round" font-family="Noto Sans KR,sans-serif">'+b.country+'</text>';
+    // Inner bright dot
+    svg+='<circle cx="'+b.x+'" cy="'+b.y+'" r="'+(b.r*0.35)+'" fill="#fff" opacity="0.6" style="pointer-events:none"/>';
   });
 
   svg+='</svg>';
