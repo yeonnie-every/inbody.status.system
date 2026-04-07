@@ -12,8 +12,8 @@ css.textContent=`
 .rm-card{background:var(--white);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
 .rm-card-head{padding:14px 20px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;justify-content:space-between}
 .rm-card-body{padding:16px 20px}
-.rm-map-outer{position:relative;background:#f8fafc;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb}
-.rm-map-bg{display:block;width:100%;height:auto;opacity:1}
+.rm-map-outer{position:relative;background:#f8fafc;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb;max-height:340px}
+.rm-map-bg{display:block;width:100%;height:auto;opacity:1;max-height:340px;object-fit:contain}
 .rm-map-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
 .rm-map-overlay svg{width:100%;height:100%;pointer-events:all}
 .rm-map-tooltip{position:fixed;background:rgba(26,31,46,.96);color:#fff;padding:14px 20px;border-radius:12px;font-size:12px;pointer-events:none;z-index:999;display:none;box-shadow:0 8px 32px rgba(0,0,0,.3);line-height:1.9;backdrop-filter:blur(8px);border:1px solid rgba(100,100,100,.15);max-width:220px}
@@ -132,7 +132,7 @@ if(rp){rp.innerHTML=`
   </div>
   <div class="rm-card">
     <div class="rm-card-head">📊 국가별 진행률 순위</div>
-    <div class="rm-card-body" style="padding:10px 16px;max-height:420px;overflow-y:auto"><div id="rm-country-rank"></div></div>
+    <div class="rm-card-body" style="padding:10px 16px;max-height:340px;overflow-y:auto"><div id="rm-country-rank"></div></div>
   </div>
 </div>
 <div class="rm-grid-2">
@@ -205,14 +205,20 @@ function renderWorldMap(){
     }
   }
 
-  var svg='<svg viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><defs><filter id="pin-shadow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0.2" stdDeviation="0.3" flood-color="#000" flood-opacity="0.2"/></filter></defs>';
+  var svg='<svg viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><defs><filter id="pin-shadow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0.15" stdDeviation="0.2" flood-color="#000" flood-opacity="0.2"/></filter></defs>';
 
   bubbles.forEach(function(b){
-    // Pin with shadow
-    svg+='<circle cx="'+b.x+'" cy="'+b.y+'" r="'+b.r+'" fill="'+b.color+'" filter="url(#pin-shadow)" stroke="#fff" stroke-width="0.15" style="cursor:pointer" '+
+    // Balloon pin: round body + small pointed tail at bottom
+    var px=b.x, py=b.y;
+    var s=0.55; // scale
+    // Round balloon body centered above the point
+    svg+='<circle cx="'+px+'" cy="'+(py-s*1.5)+'" r="'+(s*1.1)+'" fill="'+b.color+'" filter="url(#pin-shadow)" stroke="#fff" stroke-width="0.15" style="cursor:pointer" '+
       'onmouseenter="showMapTip(evt,\''+b.country.replace(/'/g,"\\\'")+'\','+b.s.d+','+b.s.t+','+b.pct+','+b.s.i+','+b.s.n+',\''+b.continent+'\')" onmouseleave="hideMapTip()"/>';
-    // Inner bright dot
-    svg+='<circle cx="'+b.x+'" cy="'+b.y+'" r="'+(b.r*0.3)+'" fill="#fff" opacity="0.7" style="pointer-events:none"/>';
+    // Small triangle tail pointing down to exact location
+    var tx1=px-s*0.4, tx2=px+s*0.4, ty1=py-s*0.7, ty2=py;
+    svg+='<polygon points="'+tx1+','+ty1+' '+tx2+','+ty1+' '+px+','+ty2+'" fill="'+b.color+'" style="pointer-events:none"/>';
+    // Shine dot on balloon
+    svg+='<circle cx="'+(px-s*0.3)+'" cy="'+(py-s*1.8)+'" r="'+(s*0.25)+'" fill="#fff" opacity="0.7" style="pointer-events:none"/>';
   });
 
   svg+='</svg>';
